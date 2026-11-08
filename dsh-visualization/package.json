@@ -1,0 +1,61 @@
+{
+  "name": "dsh-visualization",
+  "version": "0.1.0",
+  "description": "DSH VISUALIZATION — a session instrument: rings, turns, tools and background jobs of the live DSH session.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": {
+      "default": "./index.js"
+    },
+    "./client": {
+      "default": "./client.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "fold.cjs",
+    "build.cjs",
+    "cordis.patch.yml",
+    "web",
+    "locale",
+    "icon.svg",
+    "LICENSE",
+    "README.md"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "visualization",
+    "session"
+  ],
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node build.cjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/peilopielo/dsh-Visualization.git",
+    "directory": "dsh-visualization"
+  },
+  "homepage": "https://github.com/peilopielo/dsh-Visualization/tree/main/dsh-visualization",
+  "bugs": {
+    "url": "https://github.com/peilopielo/dsh-Visualization/issues"
+  }
+}

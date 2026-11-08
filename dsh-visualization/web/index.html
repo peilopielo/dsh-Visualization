@@ -1,0 +1,1887 @@
+<!doctype html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8">
+<title>DSH Visualization · session instrument</title>
+<style>
+:root{
+  --ink:#eceff5; --mid:#a8b0bc; --dim:#767e8a;
+  --line:rgba(190,200,215,.20); --line2:rgba(190,200,215,.10);
+  --bg:#1b1e23; --bg2:#23272e;
+  --session:#e6edfa; --user:#8fe0c8; --tool:#ffc46b; --task:#f0a6c6;
+  --skill:#b28cff; --state:#8a919d; --ok:#8fe0c8; --bad:#ff8a6b;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+  font:11px/1.45 ui-monospace,"Cascadia Mono",Consolas,monospace;cursor:default}
+#bg{position:fixed;inset:0;background:
+  radial-gradient(ellipse 64% 60% at 38% 44%, #31363e 0%, #282d34 40%, #1f2329 72%, #191c21 100%)}
+#grain{position:fixed;inset:0;opacity:.2;pointer-events:none;
+  background-image:repeating-linear-gradient(0deg, rgba(255,255,255,.022) 0 1px, transparent 1px 3px)}
+#net{position:fixed;inset:0;pointer-events:auto}
+
+/* 悬停提示 + 点击后的详情卡 */
+#tip{position:fixed;z-index:40;pointer-events:none;padding:3px 8px;background:rgba(10,12,16,.92);
+  border:1px solid rgba(190,200,215,.28);font-size:11px;color:var(--ink);letter-spacing:.04em;
+  opacity:0;transition:opacity .1s;white-space:nowrap}
+#tip.on{opacity:1}
+#tip em{font-style:normal;color:var(--dim);font-size:9px;margin-left:5px}
+#tdetail{position:fixed;z-index:41;width:330px;padding:11px 13px;background:rgba(10,12,16,.96);
+  border:1px solid rgba(190,200,215,.3);font:10px/1.6 ui-monospace,Consolas,monospace;color:var(--mid);
+  display:none;box-shadow:0 8px 30px rgba(0,0,0,.6)}
+#tdetail.on{display:block}
+#tdetail h5{margin:0 0 7px;font-size:12px;color:#fff;letter-spacing:.06em;display:flex;align-items:baseline;gap:6px}
+#tdetail h5 em{font-style:normal;font-size:9px;color:var(--dim)}
+#tdetail .row{display:flex;justify-content:space-between;border-bottom:1px solid rgba(190,200,215,.10);padding:2px 0}
+#tdetail .row b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+#tdetail .sub{margin-top:8px;color:var(--dim);font-size:9px;letter-spacing:.14em}
+#tdetail .cmd{display:flex;gap:7px;margin-top:3px;font-size:9px;line-height:1.45;color:var(--mid)}
+#tdetail .cmd .t{flex:none;color:var(--dim);font-variant-numeric:tabular-nums}
+#tdetail .cmd span:last-child{word-break:break-all;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+.dash{position:fixed;inset:0;pointer-events:none;display:grid;
+  grid-template-columns:1fr 430px;grid-template-rows:56px 1fr 226px;
+  grid-template-areas:"top top" "rings side" "log side"}
+.lb{font-size:9px;letter-spacing:.24em;color:var(--dim);text-transform:uppercase}
+
+/* 过滤片：点一下就只看这一类 */
+.flt{display:flex;gap:5px;margin:-3px 0 8px;flex-wrap:wrap}
+.flt b{font-size:9px;letter-spacing:.1em;color:#717885;border:1px solid rgba(190,200,215,.14);
+  padding:2px 8px;cursor:pointer;user-select:none;font-weight:500;transition:color .12s,border-color .12s}
+.flt b:hover{color:#dfe4ec;border-color:rgba(190,200,215,.4)}
+.flt b.on{color:#101216;background:#cfd6e0;border-color:#cfd6e0;font-weight:700}
+
+/* 顶栏 */
+.top{grid-area:top;pointer-events:auto;display:flex;align-items:center;gap:24px;padding:0 24px;border-bottom:1px solid var(--line2);position:relative}
+/* 会话进度条：一轮一段，宽度 ∝ 该轮时长；当前轮亮琥珀 */
+.tstrip{position:absolute;left:24px;right:24px;bottom:0;height:3px;display:flex;gap:2px;align-items:stretch}
+.tstrip i{display:block;min-width:2px;background:rgba(190,200,215,.20);transition:background .2s}
+.tstrip i.cur{background:var(--tool);box-shadow:0 0 8px rgba(255,196,107,.7)}
+.tstrip i.err{background:rgba(255,138,107,.55)}
+.brand b{font-size:13px;letter-spacing:.3em;color:#fff}
+.brand span{font-size:9px;letter-spacing:.18em;color:var(--dim);margin-left:10px}
+.ws{font-size:10px;color:var(--dim);max-width:34vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stats{display:flex;gap:20px;margin-left:auto;align-items:baseline}
+.st i{display:block;font-size:9px;letter-spacing:.18em;color:var(--dim);font-style:normal}
+.st b{font-size:16px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
+.st b.pink{color:var(--task)}
+.stchip{border:1px solid currentColor;padding:3px 10px;font-size:10px;letter-spacing:.24em;color:var(--dim)}
+.popout{cursor:pointer;font-size:10px;font-weight:400;letter-spacing:.08em;color:var(--dim);
+  border:1px solid rgba(190,200,215,.22);padding:2px 8px;border-radius:3px;user-select:none;white-space:nowrap;
+  text-decoration:none;display:inline-block}
+.popout:hover{color:var(--ink);border-color:rgba(190,200,215,.5)}
+.clk{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums;min-width:64px;text-align:right}
+
+/* 环区 */
+.rings{grid-area:rings;position:relative}
+.core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.core .cs{font-size:11px;letter-spacing:.42em;color:var(--mid)}
+.core .cb{font-size:48px;line-height:1.02;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;
+  text-shadow:0 0 40px rgba(170,205,255,.35)}
+.core .cl{font-size:9px;letter-spacing:.4em;color:var(--dim)}
+#link{position:absolute;left:24px;bottom:16px;font-size:10px;color:var(--dim);line-height:1.7;pointer-events:auto}
+#link b{color:var(--mid);font-weight:600}
+#link .bad{color:var(--bad)}
+#pick{background:#1b1e23;color:var(--ink);border:1px solid rgba(190,200,215,.22);font:10px ui-monospace,Consolas,monospace;padding:2px 5px;max-width:360px;cursor:pointer}
+#pick:focus{outline:1px solid rgba(200,215,240,.45)}
+.chip{cursor:pointer;color:var(--mid);border:1px solid rgba(190,200,215,.22);padding:1px 8px;
+  display:inline-block;margin-right:6px;font-weight:500;user-select:none}
+.chip:hover{color:#fff;border-color:rgba(200,215,240,.5)}
+.chip.on{color:#101216;background:#cfd6e0;border-color:#cfd6e0;font-weight:700}
+
+/* 右栏 */
+.side{grid-area:side;pointer-events:auto;border-left:1px solid var(--line2);padding:18px 24px 14px;
+  display:flex;flex-direction:column;gap:18px;overflow:hidden}
+.blk{min-height:0;display:flex;flex-direction:column}
+.blk h4{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:9px}
+.blk h4 b{font-size:10px;color:var(--mid);font-weight:600;letter-spacing:.1em}
+.ctxbar{height:6px;background:rgba(255,255,255,.08);position:relative;overflow:hidden}
+.ctxbar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#6fd6bd,#eef1f7);width:0;transition:width .3s}
+.ctxrow{display:flex;justify-content:space-between;align-items:baseline;margin-top:7px}
+.ctxrow b{font-size:20px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
+.ctxrow span{font-size:10px;color:var(--dim)}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:2px 16px;margin-top:10px}
+.kv div{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px solid var(--line2)}
+.kv i{font-style:normal;color:var(--dim);font-size:9px;letter-spacing:.14em}
+.kv b{font-weight:700;font-variant-numeric:tabular-nums}
+
+.flow{position:relative}
+.flow::before{content:"";position:absolute;left:2.5px;top:8px;bottom:14px;width:1px;
+  background:linear-gradient(180deg,var(--line),var(--line2))}
+.fnode{display:grid;grid-template-columns:8px 62px 1fr 96px;align-items:baseline;gap:9px;
+  padding:7px 0;border-bottom:1px solid var(--line2);position:relative}
+.fnode .fd{width:6px;height:6px;background:currentColor;box-shadow:0 0 9px currentColor}
+.fnode i{font-style:normal;font-size:9px;letter-spacing:.2em;color:var(--mid)}
+.fnode b{font-size:17px;font-weight:800;color:#fff;text-align:right;font-variant-numeric:tabular-nums}
+.fnode em{font-style:normal;font-size:9px;color:var(--dim);text-align:right;letter-spacing:.08em}
+
+.tb{font-size:11px;overflow-y:auto;overflow-x:hidden;min-height:0;flex:1;padding-right:4px;scrollbar-width:thin;scrollbar-color:rgba(190,200,215,.28) transparent}
+.tb::-webkit-scrollbar{width:6px}
+.tb::-webkit-scrollbar-thumb{background:rgba(190,200,215,.28)}
+.tb::-webkit-scrollbar-track{background:transparent}
+.tb .rw{display:grid;gap:9px;align-items:center;padding:4px 0;border-bottom:1px solid var(--line2)}
+.tb .hdrow{color:var(--dim);font-size:9px;letter-spacing:.16em;border-bottom:1px solid var(--line)}
+.tb .rw span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#taskTable .rw{grid-template-columns:64px 1fr 52px 40px}
+#skillTable .rw{grid-template-columns:1fr 36px 56px}
+#callTable .rw{grid-template-columns:1fr 40px 58px 44px}
+
+/* 轮次时间线：一轮两行 —— 上面编号+统计，下面你当时说了什么 */
+#turnTable .row2{display:block;padding:5px 0 6px;border-bottom:1px solid var(--line2)}
+#turnTable .l1{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+#turnTable .no{font-size:10px;color:var(--dim);font-variant-numeric:tabular-nums;letter-spacing:.08em}
+#turnTable .meta{font-size:9px;color:var(--dim);font-variant-numeric:tabular-nums}
+#turnTable .ask{font-size:11px;color:var(--mid);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+#turnTable .row2.cur .no{color:var(--tool);font-weight:700}
+#turnTable .row2.cur .ask{color:var(--ink);font-weight:600}
+#turnTable .row2.cur{background:linear-gradient(90deg,rgba(255,196,107,.07),transparent)}
+
+/* 事件表里的轮次分隔条 */
+.tsep{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  padding:7px 0 4px;margin-top:2px;border-bottom:1px solid var(--line);
+  font-size:9px;letter-spacing:.14em;color:var(--dim)}
+.tsep span:first-child{color:var(--mid);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tsep span:last-child{flex:none;font-variant-numeric:tabular-nums}
+.run{color:var(--ok)}.done{color:var(--dim)}.bad{color:var(--bad)}
+
+/* 底部事件表 */
+.log{grid-area:log;pointer-events:auto;border-top:1px solid var(--line);padding:12px 24px 0;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.log .tb{flex:1;min-height:0;padding-right:6px}
+.log .hd{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
+#rows .rw{grid-template-columns:60px 66px 132px 1fr 48px 34px}
+.ly.session{color:var(--session)}.ly.user{color:var(--user)}.ly.tool{color:var(--tool)}
+.ly.task{color:var(--task)}.ly.skill{color:var(--skill)}.ly.state{color:var(--state)}
+#rows .rw .nm{color:var(--ink);font-weight:700}
+#rows .rw span{color:var(--mid)}
+.credit{position:absolute;right:24px;bottom:6px;font-size:9px;color:#5a616b}
+@media (max-width:1520px){.dash{grid-template-columns:1fr 380px}.side{padding-left:18px;padding-right:18px}}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="grain"></div>
+<canvas id="net" width="1997" height="1282" style="width: 1997px; height: 1282px; cursor: default;"></canvas>
+<div id="tip" class="" style="left: 1226px; top: 305px;"></div>
+<div id="tdetail"></div>
+
+<div class="dash">
+  <header class="top">
+    <div class="brand"><b>DSH Visualization</b><span>SESSION INSTRUMENT</span></div>
+    <div class="ws" id="tTitle">dsh工作可视化</div>
+    <div class="stats">
+      <div class="st"><i id="tTurnLb">轮次 / 58</i><b id="tTurn">58</b></div>
+      <div class="st"><i>步骤</i><b id="tStep">60</b></div>
+      <div class="st"><i>工具调用</i><b id="tTools">803</b></div>
+      <div class="st"><i>本步耗时</i><b class="pink" id="tTasks">4.8s</b></div>
+      <div class="st"><i>技能</i><b id="tSkills">1</b></div>
+      <div class="stchip" id="tState" style="color: rgb(138, 145, 157);">IDLE</div>
+    </div>
+    <div class="clk" id="tClock">20:19:29</div>
+    <a class="popout" id="tPop" href="#" target="_blank" rel="noopener"
+       title="在新窗口打开，可拖到另一个屏幕">⧉ 新窗口</a>
+    <div class="tstrip" id="tstrip"></div>
+  </header>
+
+  <div class="rings">
+    <div class="core">
+      <div class="cs" id="cState" style="color: rgb(138, 145, 157);">IDLE</div>
+      <div class="cb" id="cTurn">58</div>
+      <div class="cl">TURN</div>
+    </div>
+    <div id="link">
+      <div><b id="lkSrc">数据源：session-6a016319-917… · 3.86MB</b></div>
+      <div id="lkMeta">实时 · 0.0s 前更新 · 5293 条事件 · preset standard</div>
+      <div style="margin-top:6px"><b>会话：</b><select id="pick" data-auto="1"><option value="">自动 · 跟最新会话</option><option value="session-6a016319-9178-4fdc-b76b-e0e622ca8b17">6a016319 · dsh-Visualization · 11/7 20:07</option><option value="session-a8e93239-904a-4f4b-b381-1602b38b014b">a8e93239 · default-workspace · 11/7 15:42</option><option value="session-12e9a6c6-f16a-4ab8-ba43-c71cbefbcc2c">12e9a6c6 · default-workspace · 11/7 14:05</option><option value="session-dbbb1e1b-44ce-4288-96de-13c465684d9c">dbbb1e1b · default-workspace · 11/7 11:13</option><option value="session-2bac112f-5180-4962-a181-c018bc51c5f5">2bac112f · default-workspace · 11/6 19:46</option><option value="session-ca6d8d75-1214-4662-9a27-d6eed9fc62ae">ca6d8d75 · default-workspace · 11/6 12:39</option><option value="session-da6bbaa3-c64f-4d5a-ab3a-5880056138f0">da6bbaa3 · menote · 11/2 22:41</option><option value="session-f4c6837c-d0ec-4eb4-844e-24bc85e885e0">f4c6837c · effects · 11/1 11:41</option><option value="session-fa0d89b8-9842-47c2-8580-288d83960b7b">fa0d89b8 · default-workspace · 10/31 12:08</option><option value="session-1ef3a3ae-5a23-447e-ad2f-c299fce44b2e">1ef3a3ae · godot-dsh-学习项目 · 10/30 12:57</option><option value="session-387a4436-e8a0-413c-8fc4-5f78605b8fa0">387a4436 · default-workspace · 10/29 20:30</option><option value="session-0427c851-3ba0-4c1a-9cdb-f956ff2cec3d">0427c851 · 东方穹城录 · 10/29 19:17</option><option value="session-e2351f7a-c50f-4b75-97c1-02c36d5c331d">e2351f7a · default-workspace · 10/29 12:39</option><option value="session-ec7cd40f-68ba-4d51-94fd-2ee444313f02">ec7cd40f · default-workspace · 10/29 12:14</option><option value="session-22e5cafc-3604-4b29-93b5-897332de73eb">22e5cafc · default-workspace · 10/28 20:36</option><option value="session-65958b80-5aa4-46f9-8016-8a0baf6ba32a">65958b80 · default-workspace · 10/28 17:09</option><option value="session-c1f5eb50-0ead-4b9f-9f39-36291864ecc8">c1f5eb50 · default-workspace · 10/28 11:49</option><option value="session-49ec6397-e4ba-41fe-99af-4121c909d1c7">49ec6397 · default-workspace · 10/28 10:36</option><option value="session-1141f1ef-f7f6-4663-b388-0294c12560a3">1141f1ef · dsh-workspace · 10/27 12:57</option><option value="session-ca9b49e1-5306-4fc2-bf87-b1c3a0b5033a">ca9b49e1 · life · 10/25 20:15</option><option value="session-a2234ef9-416f-406b-9c80-39f43a08f20c">a2234ef9 · 我的脑库 · 10/25 16:53</option></select></div>
+      <div style="margin-top:7px" id="ringToggles"></div>
+      <div style="margin-top:7px"><b id="rotBtn" style="cursor:pointer;color:var(--mid);border:1px solid rgba(190,200,215,.22);padding:1px 8px;display:inline-block">环旋转：开</b><b id="cnBtn" class="chip" style="margin-left:6px">连线：两者</b><b id="shBtn" class="chip">占比：次数</b><b id="tnBtn" class="chip">连线轮数：1</b><b id="scBtn" class="chip">显示轮数：1</b><b id="langBtn" class="chip">中 / EN</b></div>
+      <div style="margin-top:7px">
+        <b id="rpPlay" class="chip">▶ 重播</b><b id="rpSpeed" class="chip">90ms/条</b><b id="rpLive" class="chip" style="display:none">回到实时</b>
+        <span id="rpProg" style="color:var(--dim);font-size:9px;margin-left:4px"></span>
+      </div>
+    </div>
+  </div>
+
+  <aside class="side">
+    <section class="blk">
+      <h4><span class="lb">会话逻辑 / 谁驱动了谁</span><b>↓ 因果</b></h4>
+      <div class="flow">
+        <div class="fnode" style="color:var(--session)"><span class="fd"></span><i>会话</i><b id="fS">58</b><em id="fS2">step 60</em></div>
+        <div class="fnode" style="color:var(--task)"><span class="fd"></span><i>步骤</i><b id="fA">60</b><em id="fA2">本步 4.8s</em></div>
+        <div class="fnode" style="color:var(--skill)"><span class="fd"></span><i>技能</i><b id="fK">1</b><em id="fK2">已加载</em></div>
+        <div class="fnode" style="color:var(--tool)"><span class="fd"></span><i>工具</i><b id="fT">803</b><em id="fT2">calls</em></div>
+        <div class="fnode" style="color:var(--user)"><span class="fd"></span><i>用量</i><b id="fO">537.7k</b><em id="fO2">in 1.24M</em></div>
+      </div>
+    </section>
+
+    <section class="blk">
+      <h4><span class="lb">上下文占用 / CONTEXT</span><b id="sTps">3 tok/s</b></h4>
+      <div class="ctxbar"><i id="ctxBar" style="width: 21%;"></i></div>
+      <div class="ctxrow"><b id="ctxPct">21%</b><span id="ctxTok">219.6k / 1.05M</span></div>
+      <div class="kv">
+        <div><i>输入</i><b id="tokIn">1.24M</b></div>
+        <div><i>输出</i><b id="tokOut">537.7k</b></div>
+        <div><i>缓存</i><b id="tokCache">366.42M</b></div>
+        <div><i>模型</i><b id="tokModel" title="deepseek-flash">deepseek-flash</b></div>
+      </div>
+    </section>
+
+    <section class="blk">
+      <h4><span class="lb">后台任务 / 工具在后台继续跑</span><b id="sJobs">1 运行中 / 共 38</b></h4>
+      <div class="flt" id="fJobs"><b data-f="jobs:all" class="on">全部</b><b data-f="jobs:run" class="">运行中</b><b data-f="jobs:done" class="">已结束</b></div>
+      <div class="tb" id="taskTable" style="max-height:108px"></div>
+    </section>
+
+    <section class="blk" style="flex:1.7">
+      <h4><span class="lb">轮次时间线 / 这个会话怎么走过来的</span><b id="sTurns">58 轮</b></h4>
+      <div class="tb" id="turnTable"></div>
+    </section>
+
+    <section class="blk" style="flex:0.9">
+      <h4><span class="lb">工具统计 / 每种工具累计干了多少</span><b id="sCall">59 次 / 6 种</b></h4>
+      <div class="flt" id="fTools"><b data-f="tools:all" class="on">全部</b><b data-f="tools:fail" class="">有失败</b><b data-f="tools:slow" class="">耗时 &gt;1s</b></div>
+      <div class="tb" id="callTable"></div>
+    </section>
+  </aside>
+
+  <section class="log">
+    <div class="hd">
+      <span class="lb">Event log / 真实事件</span>
+      <span class="lb" id="logHint">共 149 条 · 按轮分组 · 新在最上</span>
+    </div>
+    <div class="flt" id="fLog"><b data-f="log:all" class="on">全部</b><b data-f="log:tool" class="">工具</b><b data-f="log:task" class="">任务</b><b data-f="log:session" class="">会话</b><b data-f="log:skill" class="">技能</b><b data-f="log:user" class="">用户</b></div>
+    <div class="tb" id="rows"></div>
+  </section>
+  <div class="credit">DSH Visualization by Ryder191 · PolyForm NC · visual language: HALOFLUX</div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var TAU = Math.PI * 2;
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ---------------- 状态：全部来自 /state ---------------- */
+  var M = {
+    ok: false, state: 'OFFLINE', turn: 0, step: 0, turns: 0, turnOpen: false,
+    ctxPct: 0, ctxUsed: 0, ctxWin: 0, tps: 0,
+    tok: { in: 0, out: 0, cache: 0 },
+    tools: [], toolCount: 0, jobs: [], skills: [], log: [],
+    subagents: 0, approvals: 0, todos: 0, errs: 0,
+    session: {}, bridge: {}, model: '—', lastUpdate: 0, stale: false,
+    /* 按"显示轮数"收窄后的数组，render 里赋值；先给空数组，免得 draw 在首帧读到 undefined */
+    sSteps: [], sJobs: [], sTools: [], sLog: [], sStats: []
+  };
+  var COL = { session: '#e6edfa', task: '#f0a6c6', skill: '#b28cff', tool: '#ffc46b' };
+
+  /* 七层环：显隐多选、身份色、旋转速度 */
+  var RINGVIS = [true, true, true, true, false, false, false];
+  var RING_NAME = ['① 会话', '② 步骤', '③ 技能', '④ 工具', '⑤ 任务', '⑥ 审批', '⑦ 变更'];
+  var RING_COL = ['#e6edfa', '#f0a6c6', '#b28cff', '#ffc46b', '#7fd8c4', '#ff8a6b', '#8fb8ff'];
+
+  /* 连线画在环「下面」：本帧只算几何，下一帧在画环之前先画出来（1 帧延迟，肉眼无感） */
+  var CHAIN_PREV = [];
+  /* ② 环本帧的分格几何（连线要把落点对到格子中心，不能对到精确时刻） */
+  var R2GEO = null;
+  /* 各层自己的时间尺度（⑥⑦）和弧段位置（⑤）：连线必须用它们自己的坐标系 */
+  var RSPAN = {};
+  var JOBARC = {};
+  var SKILL_ANG = null;
+  function segLine(p0, p1, bright, fr) {
+    X2.beginPath(); X2.moveTo(p0.x, p0.y); X2.lineTo(p1.x, p1.y);
+    X2.strokeStyle = bright
+      ? 'rgba(255,236,205,' + (0.16 + 0.5 * fr).toFixed(3) + ')'
+      : 'rgba(168,184,210,0.30)';
+    X2.lineWidth = bright ? (1 + 1.4 * fr) : 1.1;
+    X2.stroke();
+    X2.beginPath(); X2.arc(p1.x, p1.y, bright ? 1.8 : 1.1, 0, TAU);
+    X2.fillStyle = bright ? 'rgba(255,246,230,.8)' : 'rgba(168,184,210,.45)';
+    X2.fill();
+  }
+  /* 模块级的画布上下文（draw 里的 X 是局部变量，模块级函数用不到） */
+  var X2 = null;
+
+  /* 命中测试区域（每帧由 draw 填充）：④ 环上每个工具扇区的起止角 */
+  /* 命中表：每层环画出节点时把 { kind, r, a0, a1, label, data } 登记进来，鼠标统一在这里查 */
+  var HIT = { ox: 0, oy: 0, items: [], ok: false };
+  function hitReg(o) { HIT.items.push(o); }
+
+  /* 三环旋转：② 步骤慢、③ 技能更慢、④ 工具最快；① 会话永远不转（它是坐标系）
+     rad/s。旋转后「12 点 = 现在」不再成立，最新节点会自己漂走 —— 点右下角可以关掉。 */
+  var ROT = { on: true, sp: [0, 0.030, 0.018, 0.090, 0.012, 0.006, 0.020] };
+  function rotOf(i, t) { return ROT.on ? ROT.sp[i] * t : 0; }
+
+  /* 连线方式：node = 节点之间连（顺序链）；beam = 从核心射向在跑的节点；both = 两种都要 */
+  var CN = { mode: 'both', list: ['node', 'beam', 'both'], label: { node: '节点连线', beam: '中心光束', both: '两者都有' }, share: 'count', turns: 2, turnOpts: [1, 2, 3, 5, 8, 0] };
+  /* 显示范围：按轮次收窄（0 = 全部）。影响四环、右栏表、事件表，统一口径 */
+  var SCOPE = { turns: 0, opts: [1, 2, 3, 5, 8, 0] };
+  function scopeMinTurn() {
+    var tl = M.turnsList || [];
+    if (!SCOPE.turns || tl.length <= SCOPE.turns) return -Infinity;
+    return tl[tl.length - SCOPE.turns].no;
+  }
+  function inScope(x) { return (x.turn || 0) >= scopeMinTurn(); }
+  function aggTools(list) {
+    var map = {};
+    list.forEach(function (x) {
+      var s = map[x.name] || (map[x.name] = { name: x.name, count: 0, ms: 0, fail: 0, last: 0 });
+      s.count++;
+      if (x.ms != null) s.ms += x.ms;
+      if (x.ok === false) s.fail++;
+      if (x.t > s.last) s.last = x.t;
+    });
+    return Object.keys(map).map(function (k) { return map[k] }).sort(function (a, b2) { return b2.count - a.count });
+  }
+
+  /* 英文名 → 中文说法。查不到就原样显示，不编 */
+  var TOOL_CN = {
+    read: '读取文件', read_file: '读取文件', write: '写入文件', edit: '修改文件',
+    glob: '查找文件', grep: '搜索内容', ls: '列目录',
+    bash: '执行命令', pwsh: '执行命令', terminal: '打开终端',
+    web_fetch: '抓取网页', web_search: '联网搜索',
+    read_image: '查看图片', present: '交付文件',
+    todo_write: '更新待办', update_goal: '更新目标', get_goal: '读取目标', create_goal: '设立目标',
+    skill: '加载技能', subagent: '派发子任务', subagent_fork: '派发子任务',
+    job_output: '读后台输出', job_kill: '停止后台任务', job_list: '列后台任务',
+    ask_user_question: '询问用户', schedule_create: '建定时任务', schedule_edit: '改定时任务',
+    schedule_list: '列定时任务', schedule_view: '查看定时任务',
+    plugin_manager: '管理插件', cordis_inspect_list: '查运行时清单', cordis_inspect_query: '查运行时契约',
+    session_delete: '删除会话', workflow: '跑工作流', task: '任务'
+  };
+  var SKILL_CN = {
+    'dsh-plugin-dev': '插件开发规程', 'archify': '架构图绘制',
+    'diagnose-windows-sandbox-acl': '沙箱权限诊断', 'agent-experience': '工具与技能设计',
+    'cordis-plugin-development': 'Cordis 插件开发', 'editing-cordis-compositions': '编辑装配清单',
+    'cordis-composition-reference': '装配清单参考', 'office': '办公文档', 'office-docx': 'Word 文档',
+    'office-xlsx': 'Excel 表格', 'office-pptx': 'PPT 演示', 'office-export-pdf': '导出 PDF',
+    'office-recalculate': '重算表格', 'office-render': '渲染文档'
+  };
+  var JOB_CN = { pwsh: '后台命令', bash: '后台命令', node: '后台进程', terminal: '终端', job: '后台任务' };
+
+  function cn(map, key) { return (map && map[key]) || '' }
+  /* 一行里同时给中文和原名：中文在前，原名做暗色备注 */
+  function named(map, key) {
+    var zh = cn(map, key);
+    if (!zh) return key;
+    return zh + ' <span style="color:var(--dim);font-size:9px">' + key + '</span>';
+  }
+
+  /* ---------------- 过滤 ---------------- */
+  var FILTER = { jobs: 'all', tools: 'all', log: 'all' };
+  var FL = {
+    jobs: [['all', '全部'], ['run', '运行中'], ['done', '已结束']],
+    tools: [['all', '全部'], ['fail', '有失败'], ['slow', '耗时 >1s']],
+    log: [['all', '全部'], ['tool', '工具'], ['task', '任务'], ['session', '会话'], ['skill', '技能'], ['user', '用户']]
+  };
+
+  /* 跟随宿主：/dsh-visualization/?session=<id> 时，state 只取那个会话 */
+  function API_URL(base) {
+    var s = '';
+    try { s = new URLSearchParams(location.search).get('session') || '' } catch (e) { }
+    return s ? (base + '?session=' + encodeURIComponent(s)) : base;
+  }
+  function STATE_URL() { return API_URL('state'); }
+
+  /* ---------------- 显示选项持久化 ---------------- */
+  var PREFS_KEY = 'dshviz.prefs.v1';
+  /* 从旧名字一次性迁移：haloflux.* → dshviz.*（迁移完保留旧键，不做破坏性删除） */
+  (function () {
+    var pairs = [
+      ['haloflux.prefs.v1', PREFS_KEY],
+      ['haloflux.lang', 'dshviz.lang'],
+      ['haloflux.debug', 'dshviz.debug'],
+      ['haloflux.pop.size', 'dshviz.pop.size'],
+    ];
+    try {
+      for (var i = 0; i < pairs.length; i++) {
+        var oldV = localStorage.getItem(pairs[i][0]);
+        if (oldV != null && localStorage.getItem(pairs[i][1]) == null) localStorage.setItem(pairs[i][1], oldV);
+      }
+    } catch (e) { }
+  })();
+  function syncAllBtns() {
+    var cn = $('cnBtn'), sh = $('shBtn'), rb = $('rotBtn');
+    if (cn) cn.textContent = '连线：' + CN.label[CN.mode];
+    if (sh) sh.textContent = '占比：' + (CN.share === 'count' ? '次数' : '耗时');
+    if (rb) {
+      rb.textContent = '环旋转：' + (ROT.on ? '开' : '关');
+      rb.style.color = ROT.on ? 'var(--mid)' : 'var(--dim)';
+    }
+    syncTurnBtns();
+  }
+  function savePrefs() {
+    try {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({
+        rings: RINGVIS.slice(),
+        scope: SCOPE.turns,
+        lines: CN.turns,
+        mode: CN.mode,
+        share: CN.share,
+        rot: ROT.on,
+        filter: FILTER.log, fj: FILTER.jobs, ft: FILTER.tools
+      }));
+    } catch (e) { }
+  }
+  function applyPrefs() {
+    var s = null;
+    try { s = JSON.parse(localStorage.getItem(PREFS_KEY) || 'null') } catch (e) { }
+    if (!s) return;
+    if (Array.isArray(s.rings) && s.rings.length === RINGVIS.length) {
+      for (var i = 0; i < RINGVIS.length; i++) RINGVIS[i] = !!s.rings[i];
+    }
+    if (typeof s.scope === 'number' && SCOPE.opts.indexOf(s.scope) >= 0) SCOPE.turns = s.scope;
+    if (typeof s.lines === 'number' && CN.turnOpts.indexOf(s.lines) >= 0) CN.turns = s.lines;
+    if (s.mode && CN.list.indexOf(s.mode) >= 0) CN.mode = s.mode;
+    if (s.share === 'count' || s.share === 'ms') CN.share = s.share;
+    if (typeof s.rot === 'boolean') ROT.on = s.rot;
+    if (s.filter) FILTER.log = s.filter;
+    if (s.fj) FILTER.jobs = s.fj;
+    if (s.ft) FILTER.tools = s.ft;
+  }
+
+  function fltBox(k) { return $('f' + k.charAt(0).toUpperCase() + k.slice(1)); }
+  function buildFilters() {
+    Object.keys(FL).forEach(function (k) {
+      var box = fltBox(k);
+      if (!box) return;
+      box.innerHTML = FL[k].map(function (o) {
+        return '<b data-f="' + k + ':' + o[0] + '">' + o[1] + '</b>';
+      }).join('');
+    });
+    document.addEventListener('click', function (e) {
+      var el = e.target;
+      var key = el && el.getAttribute && el.getAttribute('data-f');
+      if (!key) return;
+      var p = key.split(':');
+      FILTER[p[0]] = p[1];
+      syncFilters();
+      savePrefs();
+      render();
+    });
+  }
+  function syncFilters() {
+    Object.keys(FL).forEach(function (k) {
+      var box = fltBox(k);
+      if (!box) return;
+      var bs = box.querySelectorAll('b');
+      for (var i = 0; i < bs.length; i++) {
+        var v = bs[i].getAttribute('data-f').split(':')[1];
+        bs[i].className = (v === FILTER[k]) ? 'on' : '';
+      }
+    });
+  }
+
+  function fmt(n) {
+    n = Math.round(n || 0);
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+    return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n);
+  }
+  function hhmmss(ms) {
+    var d = ms ? new Date(ms) : new Date(), p = function (x) { return (x < 10 ? '0' : '') + x; };
+    return p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  }
+  /* 重放：桥给出虚拟时间 vtime，页面在两轮拉取之间按速度自己推进，保证 60fps 顺滑 */
+  var RP = { on: false, mode: 'seq', playing: false, speed: 50, vtime: 0, t0: 0, t1: 0, anchor: 0, pct: 0, done: false, idx: 0, total: 0 };
+  function clockNow() {
+    if (!RP.on) return Date.now();
+    if (RP.mode === 'seq') return Math.min(RP.t1, RP.vtime);   /* 事件序列：时间由事件决定，不自己推进 */
+    if (!RP.playing) return Math.min(RP.t1, RP.vtime);
+    return Math.min(RP.t1, RP.vtime + (Date.now() - RP.anchor) * RP.speed);
+  }
+
+  function ago(ms) {
+    if (!ms) return '—';
+    var s = (clockNow() - ms) / 1000;
+    if (s < 60) return s.toFixed(0) + 's';
+    if (s < 3600) return (s / 60).toFixed(0) + 'm';
+    return (s / 3600).toFixed(1) + 'h';
+  }
+
+  /* ---------------- 会话选择 ---------------- */
+  function loadSessions() {
+    fetch('sessions', { cache: 'no-store' }).then(function (r) { return r.json() }).then(function (j) {
+      var sel = $('pick');
+      if (!sel) return;
+      var pad = function (x) { return (x < 10 ? '0' : '') + x; };
+      var html = '<option value="">自动 · 跟最新会话</option>';
+      (j.sessions || []).forEach(function (s) {
+        var base = (s.cwd || s.ws || '').replace(/^.*[\\\/]/, '');
+        var d = new Date(s.mtime);
+        html += '<option value="' + s.id + '">' + s.short + ' · ' + base + ' · ' +
+          (d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + '</option>';
+      });
+      sel.innerHTML = html;
+      sel.value = j.auto ? '' : ((j.current && j.current.id) || '');
+      sel.dataset.auto = j.auto ? '1' : '';
+    }).catch(function () { });
+  }
+
+  /* ---------------- 拉数据 ---------------- */
+  var fails = 0;
+  function applyState(j) {
+      fails = 0;
+      if (!j || !j.ok) { M.ok = false; M.state = 'NO DATA'; M.err = (j && j.error) || ''; render(); return }
+      M.ok = true; M.err = '';
+      M.state = j.state; M.turn = j.turn; M.step = j.step; M.turns = j.turns;
+      M.turnOpen = j.turnOpen; M.ctxPct = j.ctxPct; M.ctxUsed = j.ctxUsed; M.ctxWin = j.ctxWin;
+      M.tps = j.tps; M.tok = j.tok || M.tok; M.tools = j.tools || []; M.toolCount = j.toolCount || 0;
+      M.jobs = j.jobs || []; M.skills = j.skills || []; M.log = j.log || [];
+      M.steps = j.steps || []; M.turnOpen = j.turnOpen;
+      M.ticks = j.ticks || []; M.toolStats = j.toolStats || []; M.turnsList = j.turnsList || [];
+      M.approvalsList = j.approvalsList || []; M.changes = j.changes || []; M.delivs = j.delivs || [];
+      M.subagents = j.subagents || 0; M.approvals = j.approvals || 0; M.todos = j.todos || 0;
+      M.session = j.session || {}; M.bridge = j.bridge || {}; M.origin = j.origin || M.origin || ''; M.lastUpdate = Date.now();
+      M.model = j.model || '—';
+      if (j.replay && j.replay.on) {
+        RP.on = true; RP.mode = j.replay.mode || 'seq'; RP.playing = j.replay.playing; RP.speed = j.replay.speed;
+        RP.vtime = j.replay.vtime; RP.t0 = j.replay.t0; RP.t1 = j.replay.t1;
+        RP.pct = j.replay.pct; RP.done = j.replay.done; RP.anchor = Date.now();
+        RP.idx = j.replay.idx || 0; RP.total = j.replay.total || 0;
+        RP.stepMs = j.replay.stepMs || 110;
+      } else { RP.on = false; }
+      syncReplayUI();
+      var sel = $('pick');
+      if (sel && document.activeElement !== sel) sel.value = j.autoFollow ? '' : (M.session.id || '');
+      render();
+  }
+
+  function pull() {
+    fetch(STATE_URL(), { cache: 'no-store' }).then(function (r) { return r.json() })
+      .then(applyState)
+      .catch(function () {
+        fails++;
+        M.ok = false; M.state = 'OFFLINE';
+        if (fails > 1) render();
+      });
+  }
+
+  /* SSE：宿主那边变了才推一条；连不上就退回轮询 */
+  var ES = null, esMiss = 0, pollTimer = 0;
+  function startPolling() {
+    if (pollTimer) return;
+    (function loop() {
+      pull();
+      pollTimer = setTimeout(loop, RP.on ? 160 : 900);
+    })();
+  }
+  function startStream() {
+    if (!window.EventSource) { startPolling(); return }
+    try { ES = new EventSource(API_URL('events')) } catch (e) { startPolling(); return }
+    ES.onmessage = function (ev) {
+      try { applyState(JSON.parse(ev.data)) } catch (e) { }
+    };
+    ES.onopen = function () { esMiss = 0 };
+    ES.onerror = function () {
+      if (ES) { ES.close(); ES = null }
+      esMiss++;
+      if (esMiss <= 2) setTimeout(startStream, 1500);
+      else startPolling();
+    };
+  }
+
+  /* ---------------- 表格 ---------------- */
+  function cell(v) { return '<span>' + (v == null ? '' : v) + '</span>' }
+  /* 用户输入的文本要转义，否则里面的 < > & 会把表格结构打坏 */
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  /* ---------------- 多语言：中文是源，英文覆盖 ---------------- */
+  var EN = {
+    '轮次': 'Turns', '步骤': 'Steps', '工具调用': 'Tool calls', '本步耗时': 'Step time',
+    '技能': 'Skills', '本步': 'Step', '已加载': 'loaded', '工具': 'Tools', '用量': 'Usage',
+    '数据源：': 'Source: ', '实时': 'live', '前更新': 'ago', '条事件': 'events', '会话：': 'Session: ',
+    '自动 · 跟最新会话': 'Auto · newest session',
+    '会话逻辑 / 谁驱动了谁': 'SESSION FLOW / what drives what',
+    '上下文占用 / CONTEXT': 'CONTEXT',
+    '后台任务 / 工具在后台继续跑': 'JOBS / running in background',
+    '轮次时间线 / 这个会话怎么走过来的': 'TURNS / how this session went',
+    '工具统计 / 每种工具累计干了多少': 'TOOLS / total per kind',
+    'Event log / 真实事件': 'EVENT LOG / real events',
+    '全部': 'all', '运行中': 'running', '已结束': 'done', '有失败': 'has failures', '耗时 >1s': 'took >1s',
+    '环旋转：开': 'spin: on', '环旋转：关': 'spin: off',
+    '连线：节点连线': 'lines: ladders', '连线：中心光束': 'lines: beams', '连线：两者都有': 'lines: both',
+    '占比：次数': 'share: count', '占比：耗时': 'share: time',
+    '回到实时': 'back to live', '重播': 'replay', '暂停': 'pause', '继续': 'resume',
+    '↓ 因果': '↓ causal', '复用': 'load', '会话': 'Session', '任务': 'Job', '审批': 'Approval', '变更': 'Change',
+    '输入': 'in', '输出': 'out', '缓存': 'cache', '模型': 'model',
+    '类型': 'kind', '状态': 'state', '次数': 'count', '累计': 'total', '最近': 'last',
+    '调用次数': 'calls', '累计 / 平均': 'total / avg', '失败 / 最近': 'fail / last',
+    '最近几次调用': 'recent calls', '最近 6 次调用': 'last 6 calls',
+    '你的请求': 'your prompt', '步数 / 工具': 'steps / tools', '时长': 'duration', '交付': 'delivered',
+    '时间窗': 'window', '累计耗时': 'total time', '涉及轮次': 'turn', '这几步': 'steps',
+    '加载次数': 'loads', '最近使用': 'last used', '运行时长': 'ran for', '命令': 'command',
+    '时间': 'time', '结果': 'result', '轮次': 'turn',
+    '文件变更': 'file change', '交付文件': 'deliverable', '后台命令': 'command', '后台任务': 'job',
+    '执行命令': 'Command', '修改文件': 'Edit', '写入文件': 'Write', '读取文件': 'Read',
+    '查找文件': 'Glob', '搜索内容': 'Grep', '查看图片': 'Image', '抓取网页': 'Fetch',
+    '列后台任务': 'Jobs', '停止后台任务': 'Kill job', '加载技能': 'Skill', '交付文件 ': 'Present',
+    '（无文字请求）': '(no prompt)', '待定': 'pending', '进行中': 'running',
+    '用户': 'user', '名称': 'name', '详情': 'detail', '耗时': 'time', '成': 'ok', '层': 'layer',
+    '工作可视化': 'dsh session instrument', '⧉ 新窗口': '⧉ window', '环': 'rings', '数据源：未连接': 'Source: offline',
+    '① 会话': '① Session', '② 步骤': '② Steps', '③ 技能': '③ Skills', '④ 工具': '④ Tools',
+    '⑤ 任务': '⑤ Jobs', '⑥ 审批': '⑥ Approvals', '⑦ 变更': '⑦ Changes',
+    '▶ 重播': '▶ replay', '回到实时': 'back to live', '按轮分组 · 新在最上': 'grouped by turn · newest first',
+
+  }
+  var EN_RULES = [
+    [/^轮次 \/ (\d+)$/, 'Turns / $1'],
+    [/^本步 ([\d.]+s)$/, 'step $1'],
+    [/^(\d+)ms\/条$/, '$1ms/row'],
+    [/^数据源：(.+)$/, 'Source: $1'],
+    [/^重放 (.+)$/, 'replay $1'],
+
+    [/^(\d+) 步$/, '$1 steps'],
+    [/^(\d+) 工具$/, '$1 tools'],
+    [/^(\d+) 轮$/, '$1 turns'],
+    [/^共 (\d+) 条 · 新在最上$/, '$1 rows · newest first'],
+    [/^(\d+) 次 \/ (\d+) 种$/, '$1 calls / $2 kinds'],
+    [/^(\d+) 运行中 \/ 共 (\d+)$/, '$1 running / $2 total'],
+    [/^(\d+) 个$/, '$1'],
+    [/^(\d+) 步 · (\d+) 工具 · (.+)$/, '$1 steps · $2 tools · $3'],
+    [/^(\d+) 步 · (\d+) 工具$/, '$1 steps · $2 tools'],
+    [/^(\d+) 处$/, '$1 changes'],
+    [/^(\d+) 次$/, '$1'],
+    [/^运行 (\d+) · 共 (\d+)$/, 'running $1 · total $2'],
+  ]
+  var LANG = (function () {
+    try {
+      var q = new URLSearchParams(location.search).get('lang');
+      if (q === 'zh' || q === 'en') return q;
+      var s = localStorage.getItem('dshviz.lang');
+      if (s === 'zh' || s === 'en') return s;
+      return /^zh/i.test(navigator.language || '') ? 'zh' : 'en';
+    } catch (e) { return 'zh' }
+  })();
+  var EN_FN = [
+    [/^连线轮数：(.+) \/ 共 (\d+) 轮$/, function (m) {
+      return 'line turns: ' + (m[1] === '全部' ? 'all' : m[1]) + ' / ' + m[2] + ' total'
+    }],
+    [/^显示轮数：(.+)$/, function (m) { return 'show turns: ' + (m[1] === '全部' ? 'all' : m[1]) }],
+    [/^实时 · ([\d.]+s) 前更新 · (\d+) 条事件 · preset (.+)$/, function (m) {
+      return 'live · updated ' + m[1] + ' ago · ' + m[2] + ' events · preset ' + m[3]
+    }],
+    [/^(.*)工作可视化$/, function (m) { return (m[1] || '') + 'dsh session instrument' }],
+    [/^共 (\d+) 条 · 按轮分组 · 新在最上$/, function (m) { return m[1] + ' rows · grouped by turn · newest first' }],
+  ]
+  function tr(s) {
+    var k = String(s).trim();
+    if (!k) return s;
+    if (EN[k]) return s.replace(k, EN[k]);
+    for (var i = 0; i < EN_RULES.length; i++) {
+      if (EN_RULES[i][0].test(k)) return s.replace(k, k.replace(EN_RULES[i][0], EN_RULES[i][1]));
+    }
+    for (var j = 0; j < EN_FN.length; j++) {
+      var m2 = k.match(EN_FN[j][0]);
+      if (m2) return s.replace(k, EN_FN[j][1](m2));
+    }
+    return s;
+  }
+  function translateDom() {
+    if (LANG === 'zh') return;
+    var root = document.querySelector('.dash');
+    if (!root) return;
+    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+    var nodes = [], n;
+    while ((n = w.nextNode())) nodes.push(n);
+    for (var i = 0; i < nodes.length; i++) {
+      var v = tr(nodes[i].nodeValue);
+      if (v !== nodes[i].nodeValue) nodes[i].nodeValue = v;
+    }
+  }
+
+  function render() {
+    /* 先按"显示轮数"收窄数据，后面所有面板都用这几个数组 */
+    var minT = scopeMinTurn();
+    M.sSteps = (minT === -Infinity) ? (M.steps || []) : (M.steps || []).filter(inScope);
+    M.sJobs = (minT === -Infinity) ? (M.jobs || []) : (M.jobs || []).filter(inScope);
+    M.sTools = (minT === -Infinity) ? (M.tools || []) : (M.tools || []).filter(inScope);
+    M.sLog = (minT === -Infinity) ? (M.log || []) : (M.log || []).filter(inScope);
+    M.sStats = SCOPE.turns ? aggTools(M.sTools) : (M.toolStats || []);
+    M.sAppr = (minT === -Infinity) ? (M.approvalsList || []) : (M.approvalsList || []).filter(inScope);
+    M.sChg = (minT === -Infinity) ? (M.changes || []) : (M.changes || []).filter(inScope);
+    M.sDeliv = (minT === -Infinity) ? (M.delivs || []) : (M.delivs || []).filter(inScope);
+    var curStep = (M.sSteps && M.sSteps.length) ? M.sSteps[M.sSteps.length - 1] : null;
+    var stepSec = curStep ? Math.max(0, ((curStep.end || clockNow()) - curStep.t) / 1000) : 0;
+    var st = { IDLE: '#8a919d', THINKING: '#f0a6c6', STREAMING: '#e6edfa', TOOL: '#ffc46b', OFFLINE: '#ff8a6b', 'NO DATA': '#ff8a6b', 'NO SESSION': '#ff8a6b' };
+    var c = M.ok ? (st[M.state] || '#8a919d') : '#ff8a6b';
+    $('tState').textContent = M.ok ? M.state : (M.state === 'OFFLINE' ? '未连接' : M.state);
+    $('tState').style.color = c;
+    $('cState').textContent = M.ok ? M.state : 'OFFLINE';
+    $('cState').style.color = c;
+    $('cTurn').textContent = M.turn;
+    $('tTurn').textContent = M.turn;
+    /* 会话进度条：一轮一段，宽度按该轮时长 */
+    var tlAll = M.turnsList || [];
+    var stripEl = $('tstrip');
+    if (stripEl) {
+      var totalDur = 0;
+      tlAll.forEach(function (x) { totalDur += Math.max(500, (x.end || clockNow()) - x.start) });
+      var sh = '';
+      tlAll.forEach(function (x) {
+        var d = Math.max(500, (x.end || clockNow()) - x.start);
+        var pct = totalDur ? (d / totalDur) * 100 : 0;
+        var cls = (x.no === M.turn && M.turnOpen) ? 'cur' : (/err|fail/i.test(x.reason || '') ? 'err' : '');
+        sh += '<i class="' + cls + '" style="flex:' + pct.toFixed(2) + ' 0 auto" title="T' + x.no + ' · ' +
+          Math.round(d / 1000) + 's"></i>';
+      });
+      stripEl.innerHTML = sh;
+      var lb = $('tTurnLb');
+      if (lb) lb.textContent = '轮次 / ' + tlAll.length;
+    }
+    $('tStep').textContent = M.step;
+    $('tTools').textContent = M.toolCount;
+    $('tTasks').textContent = stepSec.toFixed(1) + 's';
+    $('tSkills').textContent = M.skills.length;
+    $('tTitle').textContent = M.session.title ? M.session.title : (M.session.id || '未连接 bridge');
+    $('tClock').textContent = hhmmss();
+
+    var pct = Math.round((M.ctxPct || 0) * 100);
+    $('ctxBar').style.width = Math.min(100, pct) + '%';
+    $('ctxPct').textContent = pct + '%';
+    $('ctxTok').textContent = fmt(M.ctxUsed) + ' / ' + fmt(M.ctxWin);
+    $('tokIn').textContent = fmt(M.tok.in);
+    $('tokOut').textContent = fmt(M.tok.out);
+    $('tokCache').textContent = fmt(M.tok.cache);
+    $('tokModel').textContent = M.model || '—';
+    $('tokModel').title = M.model || '';
+    $('sTps').textContent = M.tps ? M.tps + ' tok/s' : '—';
+
+    /* 逻辑链 */
+    $('fS').textContent = M.turn;
+    $('fS2').textContent = 'step ' + M.step;
+    $('fA').textContent = M.step;
+    $('fA2').textContent = '本步 ' + stepSec.toFixed(1) + 's';
+    $('fK').textContent = M.skills.length;
+    $('fK2').textContent = '已加载';
+    $('fT').textContent = M.toolCount;
+    $('fT2').textContent = 'calls';
+    $('fO').textContent = fmt(M.tok.out);
+    $('fO2').textContent = 'in ' + fmt(M.tok.in);
+
+    /* 任务表：运行中优先，最多 6 行 */
+    var jobs = M.sJobs.slice().sort(function (a, b) {
+      return (b.state === 'RUN') - (a.state === 'RUN') || (b.t || 0) - (a.t || 0);
+    }).filter(function (j) {
+      if (FILTER.jobs === 'run') return j.state === 'RUN';
+      if (FILTER.jobs === 'done') return j.state !== 'RUN';
+      return true;
+    });
+    var h = '<div class="rw hdrow">' + cell('类型') + cell('任务') + cell('状态') + cell('时长') + '</div>';
+    jobs.forEach(function (j) {
+      h += '<div class="rw">' + cell(named(JOB_CN, j.kind)) +
+        cell(j.label) +
+        cell('<span class="' + (j.state === 'RUN' ? 'run' : 'done') + '">' +
+          (j.state === 'RUN' ? '运行中' : '已结束') + '</span>') +
+        cell(ago(j.end || j.t)) + '</div>';
+    });
+    if (!jobs.length) h += '<div class="rw"><span style="grid-column:1/-1;color:var(--dim)">— ' + (FILTER.jobs === 'all' ? '无后台任务' : '没有符合条件的任务') + '</span></div>';
+    $('taskTable').innerHTML = h;
+    $('sJobs').textContent = M.sJobs.filter(function (j) { return j.state === 'RUN'; }).length + ' 运行中 / 共 ' + M.sJobs.length +
+      (FILTER.jobs === 'all' ? '' : ' · 显示 ' + jobs.length);
+
+    /* 轮次时间线：最新在上，一轮两行 */
+    var tl = (M.turnsList || []).slice().reverse();
+    h = '';
+    tl.forEach(function (t3) {
+      var dur = ((t3.end || clockNow()) - t3.start) / 1000;
+      var durStr = dur >= 60 ? (dur / 60).toFixed(1) + 'm' : Math.round(dur) + 's';
+      var cur3 = (t3.no === M.turn && M.turnOpen);
+      var m2 = t3.steps + ' 步 · ' + t3.tools + ' 工具 · ' + durStr + (t3.files ? ' · ' + t3.files + ' 文件' : '');
+      h += '<div class="row2' + (cur3 ? ' cur' : '') + '">' +
+        '<div class="l1"><span class="no">T' + t3.no + (cur3 ? ' ●' : '') + '</span><span class="meta">' + m2 + '</span></div>' +
+        '<div class="ask">' + esc(t3.prompt || '（这一轮没有文字请求）') + '</div></div>';
+    });
+    if (!tl.length) h = '<div class="rw"><span style="color:var(--dim)">— 还没有轮次</span></div>';
+    $('turnTable').innerHTML = h;
+    $('sTurns').textContent = tl.length + ' 轮';
+    syncTurnBtns();   /* 轮次总数变了，让"连线轮数 x / 共 N 轮"跟着更新 */
+
+    /* 工具统计：常驻，按次数排序，不随窗口滚动 */
+    h = '<div class="rw hdrow">' + cell('工具') + cell('次数') + cell('累计') + cell('最近') + '</div>';
+    var stats = (M.sStats || []).filter(function (s) {
+      if (FILTER.tools === 'fail') return s.fail > 0;
+      if (FILTER.tools === 'slow') return s.ms >= 1000;
+      return true;
+    });
+    stats.forEach(function (s) {
+      h += '<div class="rw">' + cell('<span style="color:var(--tool)">' + named(TOOL_CN, s.name) + '</span>') +
+        cell('<span style="text-align:right">' + s.count + (s.fail ? '<span class="bad"> ×' + s.fail + '</span>' : '') + '</span>') +
+        cell('<span style="text-align:right;color:var(--dim)">' + (s.ms >= 1000 ? (s.ms / 1000).toFixed(1) + 's' : s.ms + 'ms') + '</span>') +
+        cell('<span style="text-align:right;color:var(--dim)">' + ago(s.last) + '</span>') + '</div>';
+    });
+    if (!stats.length) h += '<div class="rw"><span style="grid-column:1/-1;color:var(--dim)">— ' + (FILTER.tools === 'all' ? '还没有工具调用' : '没有符合条件的工具') + '</span></div>';
+    $('callTable').innerHTML = h;
+    $('sCall').textContent = (M.sTools ? M.sTools.length : 0) + ' 次 / ' + (M.sStats ? M.sStats.length : 0) + ' 种' +
+      (FILTER.tools === 'all' ? '' : ' · 显示 ' + stats.length);
+
+    /* 事件表：按轮分组，每组表头写你当时的请求 */
+    h = '<div class="rw hdrow">' + cell('时间') + cell('层') + cell('名称') +
+      cell('详情') + cell('耗时') + cell('成') + '</div>';
+    var rows = M.sLog.filter(function (e) { return FILTER.log === 'all' || e.layer === FILTER.log; }).slice().reverse();
+    var tMap = {};
+    (M.turnsList || []).forEach(function (t4) { tMap[t4.no] = t4; });
+    var seenTurn = null;
+    rows.forEach(function (e) {
+      var layerCn = { session: '会话', user: '用户', tool: '工具', task: '任务', skill: '技能', state: '状态' }[e.layer] || e.layer;
+      if (e.turn !== seenTurn) {
+        seenTurn = e.turn;
+        var tr4 = tMap[e.turn];
+        h += '<div class="tsep"><span>T' + e.turn +
+          (tr4 ? ' · ' + esc(tr4.prompt || '') : '') + '</span>' +
+          '<span>' + (tr4 ? tr4.steps + ' 步 · ' + tr4.tools + ' 工具' : '') + '</span></div>';
+      }
+      h += '<div class="rw">' + cell(hhmmss(e.atMs || 0)) +
+        cell('<span class="ly ' + e.layer + '">' + layerCn + '</span>') +
+        cell('<span class="nm">' + esc(e.name) + '</span>') +
+        cell(esc(e.detail || '')) +
+        cell('<span style="text-align:right">' + (e.ms == null ? '—' : e.ms) + '</span>') +
+        cell('<span class="' + (e.ok ? 'run' : 'bad') + '">' + (e.ok ? '·' : '×') + '</span>') + '</div>';
+    });
+    if (!rows.length) h += '<div class="rw"><span style="grid-column:1/-1;color:var(--dim)">— 暂无事件</span></div>';
+    $('rows').innerHTML = h;
+    $('logHint').textContent = '共 ' + M.sLog.length + ' 条' + (FILTER.log === 'all' ? '' : ' · 显示 ' + rows.length) + ' · 按轮分组 · 新在最上';
+
+    /* 数据来源 */
+    $('lkSrc').textContent = M.ok
+      ? '数据源：' + (M.session.id || '?').replace('session-', 'session-').slice(0, 20) + '… · ' + fmt(M.bridge.bytes) + 'B'
+      : '数据源：未连接';
+    if (LANG !== 'zh') setTimeout(translateDom, 0);   /* 英文模式：等这一帧所有赋值完成再换标签 */
+    $('lkMeta').innerHTML = M.ok
+      ? ((RP.on
+        ? (RP.mode === 'seq'
+          ? '重放 ' + RP.stepMs + 'ms/条 · ' + (RP.idx + 1) + '/' + RP.total + ' · '
+          : '重放 ' + RP.speed + '× · ' + Math.round(RP.pct * 100) + '% · ')
+        : '实时 · ') +
+        ((Date.now() - M.lastUpdate) / 1000).toFixed(1) + 's 前更新 · ' + (M.bridge.events || 0) + ' 条事件 · preset ' + (M.session.preset || '?'))
+      : '<span class="bad">' + esc(M.err || '连不上数据源：检查插件是否启用、或 bridge 是否在跑') + '</span>';
+
+    if (DEBUG) {
+      window.__M = M;            /* 调试用：状态镜像 */
+      window.__HIT = HIT;        /* 调试用：命中表（每帧重建） */
+    }
+  }
+
+  /* ---------------- 画布 ---------------- */
+  /* 调试面：只有 ?debug=1 / #debug / localStorage.dshviz.debug=1 时才挂到 window 上 */
+  var DEBUG = (function () {
+    try {
+      if (/[?&]debug=1\b/.test(location.search)) return true;
+      if (/(^|[#&])debug(=1)?\b/.test(location.hash)) return true;
+      return localStorage.getItem('dshviz.debug') === '1';
+    } catch (e) { return false; }
+  })();
+  var net = $('net'), nx = net.getContext('2d');
+  var VW = 0, VH = 0, DPR = 1;
+  var G = { ox: 0, oy: 0, base: 0, rad: [0, 0, 0, 0] };
+  var webC = null, webR = 0, pulse = 0, lastToolCount = -1;
+
+
+  /* 工具按类型着色：刻意避开 ① 白、② 粉(#f0a6c6)、③ 紫(#b28cff)，否则会和上层环混在一起
+     命令=琥珀（工具环的主色）、写=橙、读=薄荷、网络=蓝、技能类=天蓝、其他=冷灰 */
+  function toolColor(name, a) {
+    var c = '#a8b4c4';
+    if (/^(read|glob|grep|ls)/.test(name) || name === 'read_image') c = '#7fe3c0';
+    else if (/^(write|edit)/.test(name)) c = '#ff7a5c';
+    else if (/^(bash|pwsh|job_|terminal)/.test(name)) c = '#ffc46b';
+    else if (/^(web_|cordis_)/.test(name)) c = '#8fb8ff';
+    else if (/^(skill|subagent)/.test(name)) c = '#8fd0e8';
+    return rgba(c, a);
+  }
+
+  function rgba(hex, a) {
+    var n = parseInt(hex.slice(1), 16);
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+  function measure() {
+    var z = document.querySelector('.rings').getBoundingClientRect();
+    G.ox = z.left + z.width / 2;
+    G.oy = z.top + z.height / 2;
+    var R = Math.min(z.width * 0.40, z.height * 0.46);
+    G.base = R / 0.66;
+    G.rad = [0, 0, 0, 0, 0, 0, 0];
+  }
+  function buildWeb() {
+    var Rc = G.base * 0.245;
+    if (!(Rc > 24)) return;
+    webR = Rc;
+    var d = Math.min(DPR, 1.5);
+    webC = document.createElement('canvas');
+    webC.width = Math.ceil(2 * Rc * d); webC.height = Math.ceil(2 * Rc * d);
+    var c = webC.getContext('2d');
+    c.setTransform(d, 0, 0, d, 0, 0); c.translate(Rc, Rc);
+    /* 原来的 620 条随机曲线太乱，去掉；只留一层很淡的点，作为核心的"颗粒感" */
+    for (var i = 0; i < 26; i++) {
+      var na = Math.random() * TAU, nr = Rc * Math.random() * 0.95;
+      c.fillStyle = 'rgba(240,246,255,' + (0.15 + Math.random() * 0.5).toFixed(2) + ')';
+      c.beginPath(); c.arc(Math.cos(na) * nr, Math.sin(na) * nr, 0.7 + Math.random() * 1.1, 0, TAU); c.fill();
+    }
+    var g = c.createRadialGradient(0, 0, 0, 0, 0, Rc);
+    g.addColorStop(0, 'rgba(170,200,245,.15)');
+    g.addColorStop(0.55, 'rgba(150,170,205,.05)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(0, 0, Rc, 0, TAU); c.fill();
+    c.strokeStyle = 'rgba(200,215,240,.16)'; c.lineWidth = 1;
+    c.beginPath(); c.arc(0, 0, Rc, 0, TAU); c.stroke();
+  }
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    VW = window.innerWidth; VH = window.innerHeight;
+    net.width = Math.round(VW * DPR); net.height = Math.round(VH * DPR);
+    net.style.width = VW + 'px'; net.style.height = VH + 'px';
+    nx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    measure(); buildWeb();
+  }
+
+  function draw(t) {
+    var X = nx;
+  X2 = nx;
+    HIT.items = [];
+    X.clearRect(0, 0, VW, VH);
+    if (!G.base) return;
+    var ox = G.ox, oy = G.oy, R = G.rad, b = pulse;
+    var beat = (Math.sin(t * 1.5) + 1) * 0.5;
+
+    /* 网：内核 */
+    if (webC) {
+      X.save(); X.translate(ox, oy); X.rotate(t * 0.006);
+      X.globalAlpha = 0.5 + b * 0.4;
+      X.drawImage(webC, -webR, -webR, webR * 2, webR * 2);
+      X.restore();
+    }
+    var stc = { IDLE: '#8a919d', THINKING: '#f0a6c6', STREAMING: '#e6edfa', TOOL: '#ffc46b' }[M.state] || '#8a919d';
+    if (!M.ok) stc = '#ff8a6b';
+    var cr = 3 + beat * 2 + b * 3;
+    var grd = X.createRadialGradient(ox, oy, 0, ox, oy, Math.max(26, G.base * 0.16));
+    grd.addColorStop(0, rgba(stc, 0.5 + b * 0.3));
+    grd.addColorStop(1, rgba(stc, 0));
+    X.fillStyle = grd; X.beginPath(); X.arc(ox, oy, Math.max(26, G.base * 0.16), 0, TAU); X.fill();
+    X.fillStyle = '#fff'; X.beginPath(); X.arc(ox, oy, cr, 0, TAU); X.fill();
+
+    var i, rr, a;
+
+    /* 可见环数决定半径：环少 → 摊开；环多 → 收紧 */
+    var visIdx = [];
+    for (i = 0; i < RINGVIS.length; i++) if (RINGVIS[i]) visIdx.push(i);
+    var RMAX = G.base * 0.66, RMIN = G.base * 0.24;
+    if (visIdx.length === 1) R[visIdx[0]] = RMAX * 0.62;
+    else if (visIdx.length > 1) {
+      for (var vk = 0; vk < visIdx.length; vk++) {
+        R[visIdx[vk]] = RMIN + (RMAX - RMIN) * vk / (visIdx.length - 1);
+      }
+    }
+    /* 隐藏的环沿用内侧最近可见环的半径，避免取到过期的值 */
+    var carryR = RMIN * 0.7;
+    for (i = 0; i < RINGVIS.length; i++) { if (RINGVIS[i]) carryR = R[i]; else R[i] = carryR; }
+
+    /* ---- 先把连线画在环的下面（用上一帧的几何） ---- */
+    if (CHAIN_PREV.length) {
+      for (var cq = 0; cq < CHAIN_PREV.length; cq++) {
+        var ce = CHAIN_PREV[cq], cps = ce.pts;
+        for (var cp = 1; cp < cps.length; cp++) segLine(cps[cp - 1], cps[cp], ce.bright, ce.fr);
+        /* 移动光点：按路径长度插值 */
+        var lens = [], tot = 0;
+        for (var cl = 1; cl < cps.length; cl++) {
+          var ldx = cps[cl].x - cps[cl - 1].x, ldy = cps[cl].y - cps[cl - 1].y;
+          var lL = Math.sqrt(ldx * ldx + ldy * ldy);
+          lens.push(lL); tot += lL;
+        }
+        if (tot > 4) {
+          var cfrac = ((t * 0.55 + ce.phase) % 1 + 1) % 1;
+          var want2 = cfrac * tot, acc3 = 0, dotP = cps[cps.length - 1];
+          for (var ck = 0; ck < lens.length; ck++) {
+            if (acc3 + lens[ck] >= want2) {
+              var uu = lens[ck] ? (want2 - acc3) / lens[ck] : 0;
+              dotP = {
+                x: cps[ck].x + (cps[ck + 1].x - cps[ck].x) * uu,
+                y: cps[ck].y + (cps[ck + 1].y - cps[ck].y) * uu
+              };
+              break;
+            }
+            acc3 += lens[ck];
+          }
+          var cA2 = ce.bright ? (0.55 + 0.45 * Math.sin(cfrac * Math.PI)) : 0.28;
+          if (ce.bright) {
+            var dg2 = X.createRadialGradient(dotP.x, dotP.y, 0, dotP.x, dotP.y, 9);
+            dg2.addColorStop(0, 'rgba(255,250,235,' + (0.5 * cA2).toFixed(3) + ')');
+            dg2.addColorStop(1, 'rgba(255,214,150,0)');
+            X.fillStyle = dg2; X.beginPath(); X.arc(dotP.x, dotP.y, 9, 0, TAU); X.fill();
+          }
+          X.beginPath(); X.arc(dotP.x, dotP.y, ce.bright ? 2.1 : 1.3, 0, TAU);
+          X.fillStyle = 'rgba(255,250,238,' + cA2.toFixed(3) + ')'; X.fill();
+        }
+      }
+      CHAIN_PREV = [];
+    }
+
+    /* 连线只画最近 N 轮；把这个集合算一次，②环的"有没有线"和连线本身都用它 */
+    var drawTurns = [];
+    (function () {
+      var list = M.sSteps || [];
+      var limit = CN.turns || 999;
+      for (var q = list.length - 1; q >= 0 && drawTurns.length < limit; q--) {
+        if (drawTurns.indexOf(list[q].turn) < 0) drawTurns.push(list[q].turn);
+      }
+    })();
+
+    /* ① 会话环：context 进度 + turn 刻度；不转 */
+    if (RINGVIS[0]) {
+    rr = R[0];
+    X.beginPath(); X.arc(ox, oy, rr, 0, TAU);
+    X.strokeStyle = rgba(COL.session, 0.30); X.lineWidth = 3.2; X.stroke();
+    var pa = -Math.PI / 2 + TAU * Math.min(0.995, M.ctxPct || 0);
+    X.beginPath(); X.arc(ox, oy, rr, -Math.PI / 2, pa);
+    X.strokeStyle = rgba(COL.session, 0.20); X.lineWidth = 9; X.stroke();
+    X.strokeStyle = rgba(COL.session, 0.96); X.lineWidth = 3.2; X.stroke();
+    X.fillStyle = '#fff';
+    X.beginPath(); X.arc(ox + Math.cos(pa) * rr, oy + Math.sin(pa) * rr, 2.4, 0, TAU); X.fill();
+    /* 12 个刻度 = 最近 12 轮（会话长了也不能假称"第 1~12 轮"） */
+    var lastTurnNo = Math.max(1, M.turn || 1);
+    var firstTickTurn = Math.max(1, lastTurnNo - 11);
+    for (i = 0; i < 12; i++) {
+      a = -Math.PI / 2 + TAU * i / 12;
+      var tickTurn = firstTickTurn + i;
+      var past = tickTurn <= lastTurnNo;
+      X.beginPath();
+      X.moveTo(ox + Math.cos(a) * (rr + 9), oy + Math.sin(a) * (rr + 9));
+      X.lineTo(ox + Math.cos(a) * (rr + 16), oy + Math.sin(a) * (rr + 16));
+      X.lineWidth = 1; X.strokeStyle = rgba(COL.session, past ? 0.55 : 0.13); X.stroke();
+      hitReg({
+        kind: 'turn', r: rr + 12, a0: a - 0.035, a1: a + 0.035,
+        label: '轮次 ' + tickTurn, sub: past ? '已发生' : '未到', data: { no: tickTurn }
+      });
+    }
+    }
+
+    /* ② 步骤环：整场的每一步都在，按时间分格聚合 —— 格长/格粗 = 那段时间累计花了多久 */
+    if (RINGVIS[1]) {
+    rr = R[1];
+    X.beginPath(); X.arc(ox, oy, rr, 0, TAU);
+    X.strokeStyle = rgba(COL.task, 0.20); X.lineWidth = 1; X.stroke();
+    var stp = M.sSteps || [];
+    if (stp.length) {
+      var nb = Math.max(24, Math.min(60, stp.length));
+      var spanS = Math.max(120000, clockNow() - stp[0].t);
+      R2GEO = { t0: stp[0].t, span: spanS, nb: nb };
+      var buckets = [], bi, bucketLine = [];
+      for (i = 0; i < nb; i++) { buckets.push(0); bucketLine.push(false); }
+      for (i = 0; i < stp.length; i++) {
+        var sd = Math.max(0, (stp[i].end || clockNow()) - stp[i].t);
+        bi = Math.min(nb - 1, Math.floor((stp[i].t - stp[0].t) / spanS * nb));
+        buckets[bi] += sd;
+        if (!bucketLine[bi] && drawTurns.indexOf(stp[i].turn) >= 0) bucketLine[bi] = true;
+      }
+      var maxB = 1;
+      for (i = 0; i < nb; i++) if (buckets[i] > maxB) maxB = buckets[i];
+      var slotB = TAU / nb;
+      for (i = 0; i < nb; i++) {
+        var fr = buckets[i] / maxB;
+        if (fr <= 0.002) continue;
+        var ageB = clockNow() - (stp[0].t + (i + 0.5) / nb * spanS);
+        var aB = -Math.PI / 2 + (ageB / spanS) * TAU + rotOf(1, t);   // 和 ④ 一致：越旧越靠顺时针
+        var lenB = slotB * (0.2 + 0.75 * fr);
+        /* 连线范围之外的格子画暗：告诉人"这些步骤没有线，因为不在最近 N 轮里" */
+        var mulB = bucketLine[i] ? 1 : 0.3;
+        X.beginPath(); X.arc(ox, oy, rr, aB - lenB, aB);
+        X.strokeStyle = rgba(COL.task, (0.20 + 0.65 * fr) * mulB);
+        X.lineWidth = 2 + 3.5 * fr;
+        X.stroke();
+        hitReg({
+          kind: 'step', r: rr, a0: aB - lenB, a1: aB,
+          label: '步骤 · ' + (buckets[i] / 1000).toFixed(1) + 's',
+          sub: '',
+          data: { t0: stp[0].t + i / nb * spanS, t1: stp[0].t + (i + 1) / nb * spanS }
+        });
+      }
+      /* 正在跑的那一步：12 点方向点一颗亮头 */
+      if (M.turnOpen) {
+        X.beginPath(); X.arc(ox, oy, rr, -Math.PI / 2 - 0.035 + rotOf(1, t), -Math.PI / 2 + 0.035 + rotOf(1, t));
+        X.strokeStyle = rgba(COL.task, 0.95); X.lineWidth = 6; X.stroke();
+      }
+    }
+    }
+
+    /* ③ 技能环：16 个稀疏刻度，加载一个亮一个（技能是稀疏事件，一亮就代表"用过"） */
+    if (RINGVIS[2]) {
+    rr = R[2];
+    X.beginPath(); X.arc(ox, oy, rr, 0, TAU);
+    X.strokeStyle = rgba(COL.skill, 0.22); X.lineWidth = 1; X.stroke();
+    if (M.skills.length) {
+      var sIdx = Math.min(15, Math.max(0, M.skills.length - 1));
+      SKILL_ANG = -Math.PI / 2 + TAU * sIdx / 16 + rotOf(2, t);
+    }
+    for (i = 0; i < 16; i++) {
+      a = rotOf(2, t) - Math.PI / 2 + TAU * i / 16;
+      var on = i < M.skills.length;
+      X.beginPath();
+      X.moveTo(ox + Math.cos(a) * (rr - 3), oy + Math.sin(a) * (rr - 3));
+      X.lineTo(ox + Math.cos(a) * (rr + (on ? 13 : 7)), oy + Math.sin(a) * (rr + (on ? 13 : 7)));
+      X.lineWidth = on ? 2 : 1;
+      X.strokeStyle = rgba(COL.skill, on ? 0.92 : 0.14);
+      X.stroke();
+      if (on) {
+        X.beginPath(); X.arc(ox + Math.cos(a) * (rr + 16), oy + Math.sin(a) * (rr + 16), 1.9, 0, TAU);
+        X.fillStyle = rgba(COL.skill, 0.95); X.fill();
+        var sk = M.skills[i];
+        hitReg({
+          kind: 'skill', r: rr, a0: a - 0.05, a1: a + 0.05,
+          label: (sk ? (cn(SKILL_CN, sk.name) || sk.name) : '技能'),
+          sub: sk ? sk.name : '', data: { i: i }
+        });
+      }
+    }
+    }
+
+    /* ④ 工具环：不看时间，看「构成」
+       每种工具占一段弧，弧长 ∝ 调用次数，颜色区分类型。
+       想知道"什么时候调的"看右栏最近调用和底部事件表，环只回答"用了哪些、各多少" */
+    rr = R[3];
+    if (RINGVIS[3]) {
+      X.beginPath(); X.arc(ox, oy, rr, 0, TAU);
+      X.strokeStyle = 'rgba(200,215,240,.12)'; X.lineWidth = 1; X.stroke();
+    }
+    var tn = clockNow();
+    var tstats = (M.sStats || []).filter(function (s) { return s.count > 0; });
+    /* 占比口径：次数 / 耗时；并且每段至少 3°，否则只调过一次的工具会缩成 1° 看不见 */
+    var useMs = (CN.share === 'ms');
+    var vals = tstats.map(function (s) { return useMs ? Math.max(s.ms, 1) : s.count; });
+    var vtotal = vals.reduce(function (a, v) { return a + v; }, 0) || 1;
+    var segAngles;
+    var MINS = 0.052;                        /* ≈3° */
+    if (tstats.length && tstats.length * MINS < TAU) {
+      var free = TAU - tstats.length * MINS;
+      segAngles = vals.map(function (v) { return MINS + free * v / vtotal; });
+    } else {
+      segAngles = tstats.map(function () { return TAU / Math.max(1, tstats.length); });
+    }
+    var segMap = {};
+    var aCur = -Math.PI / 2 + rotOf(3, t);
+    for (i = 0; i < tstats.length; i++) {
+      var segLen = segAngles[i];
+      var gap = Math.min(0.03, segLen * 0.18);
+      var a0s = aCur + gap, a1s = aCur + segLen - gap;
+      if (RINGVIS[3]) {
+        X.beginPath(); X.arc(ox, oy, rr, a0s, a1s);
+        X.strokeStyle = toolColor(tstats[i].name, 0.92);
+        X.lineWidth = 11; X.stroke();
+      }
+      segMap[tstats[i].name] = (a0s + a1s) / 2;
+      /* 环藏起来了就别登记命中，免得点在看不见的地方还弹卡片；segMap 仍保留给连线用 */
+      if (RINGVIS[3]) hitReg({
+        kind: 'tool', r: rr, a0: a0s, a1: a1s,
+        label: cn(TOOL_CN, tstats[i].name) || tstats[i].name, sub: tstats[i].name,
+        data: { name: tstats[i].name }
+      });
+      aCur += segLen;
+    }
+    HIT.ox = ox; HIT.oy = oy;
+    /* 正在跑的那类工具：在它的段上点个亮头 */
+    var live = (M.sTools || []).filter(function (x) { return x.ms == null; }).slice(-6);
+    for (i = 0; i < live.length; i++) {
+      var la = segMap[live[i].name];
+      if (la == null) continue;
+      if (RINGVIS[3]) {
+        X.beginPath(); X.arc(ox, oy, rr, la - 0.05, la + 0.05);
+        X.strokeStyle = 'rgba(255,255,255,.85)'; X.lineWidth = 15; X.stroke();
+      }
+    }
+
+    /* ⑤ 任务环：后台任务，弧长 ∝ 运行时长，颜色 = 状态 */
+    if (RINGVIS[4]) {
+      var rr5 = R[4];
+      X.beginPath(); X.arc(ox, oy, rr5, 0, TAU);
+      X.strokeStyle = rgba(RING_COL[4], 0.14); X.lineWidth = 1; X.stroke();
+      var jl5 = (M.sJobs || []).map(function (j) {
+        var jend = j.end || (j.state === 'RUN' ? clockNow() : j.t);
+        return { j: j, d: Math.max(1, jend - j.t) };
+      }).sort(function (a2, b2) { return b2.d - a2.d; }).slice(0, 200);
+      var jdS = jl5.reduce(function (a2, x2) { return a2 + x2.d; }, 0) || 1;
+      var JM = 0.004, jFree = Math.max(0, TAU - jl5.length * JM), aJ = -Math.PI / 2 + rotOf(4, t);
+      for (i = 0; i < jl5.length; i++) {
+        var sJ2 = JM + jFree * jl5[i].d / jdS;
+        var stJ2 = String(jl5[i].j.state || '');
+        var cJ2 = stJ2 === 'RUN' ? 'rgba(127,216,196,.95)'
+          : /fail|error/i.test(stJ2) ? 'rgba(255,138,107,.9)'
+            : /kill|cancel/i.test(stJ2) ? 'rgba(138,145,157,.8)'
+              : 'rgba(127,216,196,.38)';
+        X.beginPath(); X.arc(ox, oy, rr5, aJ + 0.003, aJ + sJ2 - 0.003);
+        X.strokeStyle = cJ2; X.lineWidth = stJ2 === 'RUN' ? 7 : 4.5; X.stroke();
+        var jj = jl5[i].j;
+        JOBARC[jj.id] = aJ + sJ2 / 2;
+        hitReg({
+          kind: 'job', r: rr5, a0: aJ, a1: aJ + sJ2,
+          label: (cn(JOB_CN, jj.kind) || '任务') + ' · ' + (jj.state || ''),
+          sub: String(jj.label || '').slice(0, 40), data: { id: jj.id }
+        });
+        aJ += sJ2;
+      }
+    }
+
+    /* ⑥ 审批环：每次审批一根刻度，颜色 = 结果（绿=放行 / 红=拒绝 / 琥珀=待定） */
+    if (RINGVIS[5]) {
+      var rr6 = R[5];
+      X.beginPath(); X.arc(ox, oy, rr6, 0, TAU);
+      X.strokeStyle = rgba(RING_COL[5], 0.14); X.lineWidth = 1; X.stroke();
+      var apl = (M.sAppr || []);
+      var spanAp = Math.max(120000, apl.length ? (tn - apl[0].t) : 120000);
+      RSPAN[5] = spanAp;
+      for (i = 0; i < apl.length; i++) {
+        var aA = -Math.PI / 2 + ((tn - apl[i].t) / spanAp) * TAU + rotOf(5, t);
+        var oc = String(apl[i].outcome || '');
+        var cA = /deny|reject|refus/i.test(oc) ? 'rgba(255,138,107,.95)'
+          : /allow|approve|grant/i.test(oc) ? 'rgba(143,224,200,.95)'
+            : 'rgba(255,196,107,.85)';
+        X.beginPath();
+        X.moveTo(ox + Math.cos(aA) * (rr6 - 6), oy + Math.sin(aA) * (rr6 - 6));
+        X.lineTo(ox + Math.cos(aA) * (rr6 + 7), oy + Math.sin(aA) * (rr6 + 7));
+        X.lineWidth = 2.2; X.strokeStyle = cA; X.stroke();
+        X.beginPath(); X.arc(ox + Math.cos(aA) * (rr6 + 10), oy + Math.sin(aA) * (rr6 + 10), 1.6, 0, TAU);
+        X.fillStyle = cA; X.fill();
+        hitReg({
+          kind: 'approval', r: rr6, a0: aA - 0.035, a1: aA + 0.035,
+          label: '审批 · ' + (apl[i].tool || 'tool'),
+          sub: apl[i].outcome || '待定', data: { i: i }
+        });
+      }
+    }
+
+    /* ⑦ 变更环：文件改动 + 交付，每根刻度 = 一次改动 */
+    if (RINGVIS[6]) {
+      var rr7 = R[6];
+      X.beginPath(); X.arc(ox, oy, rr7, 0, TAU);
+      X.strokeStyle = rgba(RING_COL[6], 0.14); X.lineWidth = 1; X.stroke();
+      var chg = (M.sChg || []).map(function (c) { return { t: c.t, turn: c.turn, big: false } })
+        .concat((M.sDeliv || []).map(function (d2) { return { t: d2.t, turn: d2.turn, big: true } }))
+        .sort(function (a3, b3) { return a3.t - b3.t; });
+      var spanCh = Math.max(120000, chg.length ? (tn - chg[0].t) : 120000);
+      RSPAN[6] = spanCh;
+      for (i = 0; i < chg.length; i++) {
+        var aC = -Math.PI / 2 + ((tn - chg[i].t) / spanCh) * TAU + rotOf(6, t);
+        X.beginPath();
+        X.moveTo(ox + Math.cos(aC) * (rr7 - (chg[i].big ? 9 : 4)), oy + Math.sin(aC) * (rr7 - (chg[i].big ? 9 : 4)));
+        X.lineTo(ox + Math.cos(aC) * (rr7 + (chg[i].big ? 12 : 5)), oy + Math.sin(aC) * (rr7 + (chg[i].big ? 12 : 5)));
+        X.lineWidth = chg[i].big ? 3 : 1.4;
+        X.strokeStyle = chg[i].big ? 'rgba(255,196,107,.95)' : 'rgba(143,184,255,.8)';
+        X.stroke();
+        hitReg({
+          kind: chg[i].big ? 'deliv' : 'change', r: rr7, a0: aC - 0.03, a1: aC + 0.03,
+          label: chg[i].big ? '交付文件' : '文件变更', sub: 'T' + (chg[i].turn || '?'),
+          data: { t: chg[i].t, turn: chg[i].turn, big: chg[i].big }
+        });
+      }
+    }
+
+    /* ---- 光束：从核心射向「正在跑的那类工具」所在的扇区 ---- */
+    var pulseK = 0.75 + 0.25 * Math.sin(t * 3.2);
+    var stpAll = M.sSteps || [];
+    var spanS2 = Math.max(120000, stpAll.length ? (tn - stpAll[0].t) : 120000);
+
+    function drawBeam(ang, outer, intensity) {
+      var r0 = webR ? webR * 0.95 : G.base * 0.22;
+      var r1 = outer;
+      /* 扇形辉光：光束看到的是"一片光"，不是一根线 */
+      var wedge = X.createRadialGradient(ox, oy, r0, ox, oy, r1);
+      wedge.addColorStop(0, 'rgba(255,214,150,0)');
+      wedge.addColorStop(0.55, 'rgba(255,214,150,' + (0.05 * intensity).toFixed(3) + ')');
+      wedge.addColorStop(1, 'rgba(255,236,205,' + (0.16 * intensity).toFixed(3) + ')');
+      X.beginPath();
+      X.moveTo(ox + Math.cos(ang - 0.075) * r0, oy + Math.sin(ang - 0.075) * r0);
+      X.lineTo(ox + Math.cos(ang - 0.022) * r1, oy + Math.sin(ang - 0.022) * r1);
+      X.lineTo(ox + Math.cos(ang + 0.022) * r1, oy + Math.sin(ang + 0.022) * r1);
+      X.lineTo(ox + Math.cos(ang + 0.075) * r0, oy + Math.sin(ang + 0.075) * r0);
+      X.closePath();
+      X.fillStyle = wedge; X.fill();
+      var x0 = ox + Math.cos(ang) * r0, y0 = oy + Math.sin(ang) * r0;
+      var x1 = ox + Math.cos(ang) * r1, y1 = oy + Math.sin(ang) * r1;
+      var g = X.createLinearGradient(x0, y0, x1, y1);
+      g.addColorStop(0, 'rgba(255,214,150,0)');
+      g.addColorStop(0.35, 'rgba(255,214,150,' + (0.10 * intensity).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(255,246,230,' + (0.72 * intensity).toFixed(3) + ')');
+      X.beginPath(); X.moveTo(x0, y0); X.lineTo(x1, y1);
+      X.strokeStyle = g; X.lineWidth = 1.6 + 2.4 * intensity; X.stroke();
+      var hg = X.createRadialGradient(x1, y1, 0, x1, y1, 15);
+      hg.addColorStop(0, 'rgba(255,250,240,' + (0.45 * intensity).toFixed(3) + ')');
+      hg.addColorStop(1, 'rgba(255,220,160,0)');
+      X.fillStyle = hg; X.beginPath(); X.arc(x1, y1, 15, 0, TAU); X.fill();
+      X.beginPath(); X.arc(x1, y1, 2.4, 0, TAU);
+      X.fillStyle = 'rgba(255,252,245,' + (0.8 * intensity).toFixed(3) + ')'; X.fill();
+      X.beginPath();
+      X.moveTo(x1, y1);
+      X.lineTo(ox + Math.cos(ang) * (r1 + 30), oy + Math.sin(ang) * (r1 + 30));
+      X.strokeStyle = 'rgba(255,230,190,' + (0.25 * intensity).toFixed(3) + ')';
+      X.lineWidth = 1; X.stroke();
+    }
+
+    if (CN.mode === 'beam' || CN.mode === 'both') {
+      if (live.length) {
+        /* 有工具在跑：射向它所在的那种工具的扇区（可能多条并发） */
+        for (i = 0; i < live.length; i++) {
+          var la2 = segMap[live[i].name];
+          drawBeam(la2 == null ? -Math.PI / 2 : la2, R[3] + 2, live.length > 1 ? 0.78 : 1);
+        }
+      } else if (stpAll.length) {
+        /* 空闲也画：指向最近那一步在 ② 环上的位置，别让这个模式看起来是空的 */
+        var curS = stpAll[stpAll.length - 1];
+        var angS = -Math.PI / 2 + ((tn - curS.t) / spanS2) * TAU + rotOf(1, t);
+        drawBeam(angS, R[1] + 2, (M.turnOpen ? 0.55 : 0.34) * pulseK);
+      }
+    }
+
+    /* ---- 节点连线：跨圈的折线（核心 → 步骤 → 这一步用的工具类型 → 下一步 → …）
+       工具环现在是"构成环"，所以工具节点落在「它那种工具的扇区中心」上，不再是时间点。
+       最近两轮都画；高亮的那一轮 = 有步骤的最新一轮（新一轮还没步骤时，上一轮继续亮） ---- */
+    if (CN.mode === 'node' || CN.mode === 'both') {
+      var stps = (M.sSteps || []);
+      var hasCurStep = false;
+      for (i = 0; i < stps.length; i++) if (stps[i].turn === M.turn) { hasCurStep = true; break; }
+      var lastTurnWithSteps = stps.length ? stps[stps.length - 1].turn : -1;
+      var activeTurn = M.turnOpen ? (hasCurStep ? M.turn : lastTurnWithSteps) : lastTurnWithSteps;
+
+      var turns = drawTurns.slice().reverse();   /* 旧 → 新，和 ② 环的"有没有线"用同一个集合 */
+
+      /* 审批 / 变更常发生在两个步骤之间（等审批时没有步骤在跑），
+         按"步骤时间窗"永远接不上 —— 改成挂到"时间上最近的、在它之前的那个步骤" */
+      var stepOf = function (tms) {
+        var lo = 0, hi = stps.length - 1, ans = -1;
+        while (lo <= hi) {
+          var md = (lo + hi) >> 1;
+          if (stps[md].t <= tms) { ans = md; lo = md + 1 } else hi = md - 1;
+        }
+        return ans;
+      };
+      var extras = {};
+      var addExtra = function (list, ri) {
+        if (!RINGVIS[ri]) return;
+        (list || []).forEach(function (ev) {
+          var si = stepOf(ev.t);
+          if (si < 0) return;
+          var sX = stps[si];
+          var kX = sX.turn + '-' + sX.step;
+          (extras[kX] = extras[kX] || []).push({ ri: ri, t: ev.t });
+        });
+      };
+      addExtra(M.sAppr, 5);
+      addExtra(M.sChg, 6);
+      addExtra(M.sDeliv, 6);
+
+      var seg3 = function (p0, p1, bright, fr) {
+        X.beginPath(); X.moveTo(p0.x, p0.y); X.lineTo(p1.x, p1.y);
+        X.strokeStyle = bright
+          ? 'rgba(255,236,205,' + (0.16 + 0.5 * fr).toFixed(3) + ')'
+          : 'rgba(168,184,210,0.30)';
+        X.lineWidth = bright ? (1 + 1.4 * fr) : 1.1;
+        X.stroke();
+        X.beginPath(); X.arc(p1.x, p1.y, bright ? 1.8 : 1.1, 0, TAU);
+        X.fillStyle = bright ? 'rgba(255,246,230,.8)' : 'rgba(168,184,210,.45)';
+        X.fill();
+      };
+
+      for (var ti3 = 0; ti3 < turns.length; ti3++) {
+        var tno = turns[ti3];
+        var arr3 = stps.filter(function (s) { return s.turn === tno; });
+        if (arr3.length > 40) arr3 = arr3.slice(-40);
+        if (!arr3.length) continue;
+        var bright = (tno === activeTurn);
+        for (i = 0; i < arr3.length; i++) {
+          var s5 = arr3[i];
+          var aS5;
+          if (R2GEO && RINGVIS[1]) {
+            /* ② 环是按时间片聚合的，落点必须对齐"这一片的中心"，否则看起来错位 */
+            var bi5 = Math.min(R2GEO.nb - 1, Math.max(0, Math.floor((s5.t - R2GEO.t0) / R2GEO.span * R2GEO.nb)));
+            var bc5 = R2GEO.t0 + (bi5 + 0.5) / R2GEO.nb * R2GEO.span;
+            aS5 = -Math.PI / 2 + ((tn - bc5) / R2GEO.span) * TAU + rotOf(1, t);
+          } else {
+            aS5 = -Math.PI / 2 + ((tn - s5.t) / spanS2) * TAU + rotOf(1, t);
+          }
+          var fr5 = (i + 1) / Math.max(1, arr3.length);
+          /* 每一步一条独立的"阶梯"：① → ② → ③ → ④，先把路径点收齐，再画线、再放光点 */
+          var path = [
+            { x: ox + Math.cos(aS5) * R[0], y: oy + Math.sin(aS5) * R[0] },
+            { x: ox + Math.cos(aS5) * R[1], y: oy + Math.sin(aS5) * R[1] }
+          ];
+          /* 这一步到底用没用技能：有 skill 调用才让折线绕一下 ③ 层，否则直接去 ④ 层 */
+          var stepTools = (M.sTools || []).filter(function (x5) {
+            return x5.turn === s5.turn && x5.step === s5.step;
+          });
+          var usedSkill = stepTools.some(function (x5) { return x5.name === 'skill'; });
+          var used = 0;
+          for (var tj = 0; tj < stepTools.length && used < 12; tj++) {
+            var tl5 = stepTools[tj];
+            var aT5 = segMap[tl5.name];
+            if (aT5 == null) continue;
+            if (usedSkill) {
+              var aK = (SKILL_ANG == null) ? aT5 : SKILL_ANG;
+              path.push({ x: ox + Math.cos(aK) * R[2], y: oy + Math.sin(aK) * R[2] });
+            }
+            path.push({ x: ox + Math.cos(aT5) * R[3], y: oy + Math.sin(aT5) * R[3] });
+            used++;
+          }
+          /* ⑤⑥⑦：这一步的时间窗里如果发生了后台任务 / 审批 / 变更，折线继续往外接 */
+          var w0 = s5.t, w1 = s5.end || (s5.t + 2500);
+          /* 每层用自己画的时候用的那个时间尺度，否则落点会整体偏 */
+          var angWin = function (tms, ri) {
+            var span = RSPAN[ri] || spanS2;
+            return -Math.PI / 2 + ((tn - tms) / span) * TAU + rotOf(ri, t);
+          };
+          /* ⑤ 任务：这一步时间窗里起来的后台任务 */
+          var gotJ = 0;
+          for (var m2 = 0; m2 < (M.sJobs || []).length && gotJ < 2; m2++) {
+            var jt = M.sJobs[m2];
+            if (jt.t < w0 - 800 || jt.t > w1 + 800) continue;
+            var aJ3 = JOBARC[jt.id];      /* ⑤ 是按时长排弧的，只能用弧段中心 */
+            if (aJ3 == null) continue;
+            path.push({ x: ox + Math.cos(aJ3) * R[4], y: oy + Math.sin(aJ3) * R[4] });
+            gotJ++;
+          }
+          /* ⑥⑦：按归属挂上来的审批 / 变更 */
+          var exl = (extras[s5.turn + '-' + s5.step] || []).slice(0, 3);
+          for (var xe = 0; xe < exl.length; xe++) {
+            var e6 = exl[xe];
+            var a6 = angWin(e6.t, e6.ri);
+            path.push({ x: ox + Math.cos(a6) * R[e6.ri], y: oy + Math.sin(a6) * R[e6.ri] });
+          }
+          /* 这里只攒几何，真正的绘制在下一帧开头（画环之前）完成 —— 线在环下面 */
+          if (path.length > 1) {
+            CHAIN_PREV.push({
+              pts: path, bright: bright, fr: fr5,
+              phase: (i / Math.max(1, arr3.length)) * 0.8
+            });
+          }
+        }
+      }
+      if (DEBUG) window.__CHAIN = CHAIN_PREV;   /* 调试用：本帧攒下的连线几何 */
+    }
+
+    /* 层标签 */
+    var lastStep = (M.sSteps && M.sSteps.length) ? M.sSteps[M.sSteps.length - 1] : null;
+    var lastSec = lastStep ? Math.max(0, ((lastStep.end || tn) - lastStep.t) / 1000) : 0;
+    var cnt = [
+      Math.round((M.ctxPct || 0) * 100) + '%',
+      lastSec.toFixed(1) + 's',
+      M.skills.length + '',
+      ((M.sStats || []).filter(function (s) { return s.count > 0; }).length) + ' 种',
+      '运行 ' + (M.sJobs || []).filter(function (j) { return j.state === 'RUN'; }).length + ' · 共 ' + (M.sJobs || []).length,
+      (M.sAppr || []).length + ' 次',
+      (M.sChg || []).length + ' 处'
+    ];
+    var names = LANG === 'en'
+      ? ['① Session', '② Steps', '③ Skills', '④ Tools', '⑤ Jobs', '⑥ Approvals', '⑦ Changes']
+      : ['① 会话', '② 步骤', '③ 技能', '④ 工具', '⑤ 任务', '⑥ 审批', '⑦ 变更'];
+    var cols = RING_COL;
+    X.font = '10px ui-monospace,Consolas,monospace';
+    X.textAlign = 'center'; X.textBaseline = 'alphabetic';
+    for (i = 0; i < RING_NAME.length; i++) {
+      if (!RINGVIS[i]) continue;
+      X.fillStyle = rgba(cols[i], 0.55);
+      X.fillText(names[i], ox, oy - R[i] - 17);
+      X.fillStyle = rgba(cols[i], 0.95);
+      X.fillText(cnt[i], ox, oy - R[i] - 5);
+    }
+  }
+
+  /* ---------------- 循环 ---------------- */
+  var last = 0;
+  function frame(ts) {
+    var dt = Math.min(0.06, (ts - last) / 1000); last = ts;
+    if (lastToolCount !== M.toolCount) { pulse = 1; lastToolCount = M.toolCount; }
+    pulse *= 0.92;
+    try { draw(ts / 1000) } catch (e) { if (DEBUG) window.__DRAWERR = String((e && e.stack) || e) }
+    requestAnimationFrame(frame);
+  }
+
+  resize();
+  window.addEventListener('resize', function () { resize(); });
+  setInterval(function () { $('tClock').textContent = hhmmss(RP.on ? clockNow() : undefined); }, 1000);
+  (function () { var pb = $('tPop'); if (pb) pb.href = location.href; })();
+  /* 新窗口：拖到另一个屏幕就是一块独立仪表 */
+  var POP_KEY = 'dshviz.pop.size';
+  function readPopSize() {
+    try { return JSON.parse(localStorage.getItem(POP_KEY) || 'null') } catch (e) { return null }
+  }
+  /* 弹出来的那个窗口自己记尺寸（改完大小下次沿用） */
+  if (window.name === 'dsh-viz-instrument') {
+    (function () {
+      var tm = 0;
+      function save() {
+        try {
+          var w = window.outerWidth, hh = window.outerHeight;
+          if (w > 400 && hh > 300) localStorage.setItem(POP_KEY, JSON.stringify({ w: w, h: hh }));
+        } catch (e) { }
+      }
+      window.addEventListener('resize', function () { clearTimeout(tm); tm = setTimeout(save, 400) });
+      window.addEventListener('beforeunload', save);
+    })();
+  }
+  /* 桌面端页面跑在 dsh-app:// 协议下，那个地址粘到浏览器只会被当成搜索词。
+     宿主随状态下发真实 http origin，用它拼一个浏览器能直接打开的地址。 */
+  function browserUrl() {
+    var o = M.origin || (M.bridge && M.bridge.origin) || '';
+    if (!o && /^https?:$/.test(location.protocol)) o = location.origin;
+    if (!o) return '';
+    return o + location.pathname + location.search;
+  }
+
+  var popBtn = $('tPop');
+  if (popBtn) {
+    popBtn.href = browserUrl();
+
+    /* 桌面端（Electron）会把 window.open / target=_blank 全部吃掉，
+       那种环境下直接给地址 + 一键复制，让人在浏览器里打开再拖到副屏。 */
+    var isShell = /Electron/i.test(navigator.userAgent || '');
+    function showUrlPanel() {
+      var old = $('popPanel');
+      if (old) { old.parentNode.removeChild(old); return }
+      var box = document.createElement('div');
+      box.id = 'popPanel';
+      box.style.cssText = 'position:fixed;right:24px;top:56px;z-index:60;width:420px;padding:12px 14px;' +
+        'background:rgba(10,12,16,.97);border:1px solid rgba(190,200,215,.32);border-radius:4px;' +
+        'font:10px/1.6 ui-monospace,Consolas,monospace;color:var(--mid);box-shadow:0 10px 40px rgba(0,0,0,.6)';
+      var url = browserUrl();
+      var noOrigin = !url;
+      if (!url) url = '（宿主还没上报 origin，刷新一次页面再试）';
+      box.innerHTML =
+        '<div style="color:var(--ink);font-size:11px;margin-bottom:6px">在独立窗口里看</div>' +
+        '<div style="opacity:.7;margin-bottom:8px">桌面端不允许页面自己开窗。把下面地址粘到浏览器，' +
+        '再把那个标签页拖到另一个屏幕。</div>' +
+        '<div id="popUrl" style="user-select:all;word-break:break-all;padding:6px 8px;' +
+        'background:rgba(255,255,255,.05);border:1px solid rgba(190,200,215,.18);margin-bottom:8px">' +
+        esc(url) + '</div>' +
+        '<b id="popCopy" style="cursor:pointer;border:1px solid rgba(190,200,215,.3);padding:2px 10px;' +
+        'border-radius:3px;color:var(--ink)">复制地址</b>' +
+        '<b id="popAgain" style="cursor:pointer;margin-left:8px;color:var(--dim)">再试一次弹窗</b>';
+      document.body.appendChild(box);
+      var copy = $('popCopy');
+      if (copy) copy.addEventListener('click', function () {
+        var text = url;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { copy.textContent = '已复制' },
+            function () { copy.textContent = '复制失败，请手动选中' });
+        } else {
+          var r = document.createRange();
+          r.selectNodeContents($('popUrl'));
+          var sel = window.getSelection();
+          sel.removeAllRanges(); sel.addRange(r);
+          copy.textContent = '已选中，Ctrl+C';
+        }
+      });
+      var again = $('popAgain');
+      if (again) again.addEventListener('click', function () { openPopup(true) });
+    }
+
+    function openPopup(e) {
+      var saved = readPopSize();
+      var w = Math.max(600, saved && saved.w ? saved.w : Math.round(window.screen.availWidth * 0.7));
+      var hh = Math.max(400, saved && saved.h ? saved.h : Math.round(window.screen.availHeight * 0.8));
+      var win = null;
+      try {
+        win = window.open(location.href, 'dsh-viz-instrument',
+          'popup=yes,width=' + w + ',height=' + hh + ',menubar=no,toolbar=no,location=no,status=no');
+      } catch (err) { win = null }
+      if (win) {
+        if (e) e.preventDefault();
+        try { win.focus() } catch (err) { }
+        return true;
+      }
+      return false;
+    }
+
+    popBtn.addEventListener('click', function (e) {
+      if (isShell) { e.preventDefault(); showUrlPanel(); return }
+      if (openPopup(e)) return;
+      /* 浏览器里被拦：让 <a target="_blank"> 自己走；同时给个地址面板保底 */
+      setTimeout(function () { if (!document.hidden) showUrlPanel() }, 900);
+    });
+  }
+
+  var langBtn = $('langBtn');
+  if (langBtn) {
+    langBtn.textContent = LANG === 'zh' ? '中 / EN' : 'EN / 中';
+    langBtn.addEventListener('click', function () {
+      try { localStorage.setItem('dshviz.lang', LANG === 'zh' ? 'en' : 'zh') } catch (e) { }
+      location.reload();
+    });
+  }
+  applyPrefs();
+  buildFilters();
+  syncFilters();
+  syncAllBtns();
+  /* 地址栏参数：#ct=<连线轮数> #sc=<显示轮数>（0 = 全部），方便留一个固定视图 */
+  (function () {
+    var hp = {};
+    String(location.hash).replace(/^#/, '').split('&').forEach(function (kv) {
+      var p = kv.split('='); if (p[0]) hp[p[0]] = p[1];
+    });
+    if (hp.ct != null && !isNaN(+hp.ct)) CN.turns = +hp.ct;
+    if (hp.sc != null && !isNaN(+hp.sc)) SCOPE.turns = +hp.sc;
+    clampLineTurns();
+    syncTurnBtns();
+  })();
+  loadSessions();
+  var RPSTEPS = [300, 160, 90, 40], rpStepI = 2;   /* 每条事件之间隔多少毫秒：越小越快 */
+  function syncReplayUI() {
+    var b = $('rpPlay'), s = $('rpSpeed'), l = $('rpLive'), pr = $('rpProg');
+    if (!b) return;
+    if (RP.on) {
+      b.textContent = RP.playing ? '❚❚ 暂停' : (RP.done ? '↻ 重放' : '▶ 继续');
+      s.style.display = 'inline-block';
+      s.textContent = RP.stepMs + 'ms/条';
+      l.style.display = 'inline-block';
+      pr.textContent = RP.mode === 'seq'
+        ? '事件 ' + (RP.idx + 1) + ' / ' + RP.total + ' · ' + hhmmss(RP.vtime)
+        : Math.round(RP.pct * 100) + '% · ' + hhmmss(RP.vtime);
+    } else {
+      b.textContent = '▶ 重播';
+      s.textContent = RPSTEPS[rpStepI] + 'ms/条';
+      l.style.display = 'none';
+      pr.textContent = '';
+    }
+  }
+  function replayCall(qs) {
+    return fetch('replay?' + qs, { cache: 'no-store' })
+      .then(function (r) { return r.json() })
+      .then(function () { return pull() })
+      .catch(function () { });
+  }
+
+  var cnBtn = $('cnBtn');
+  if (cnBtn) cnBtn.addEventListener('click', function () {
+    var k = CN.list.indexOf(CN.mode);
+    CN.mode = CN.list[(k + 1) % CN.list.length];
+    cnBtn.textContent = '连线：' + CN.label[CN.mode];
+    savePrefs();
+  });
+  var shBtn = $('shBtn');
+  if (shBtn) shBtn.addEventListener('click', function () {
+    CN.share = (CN.share === 'count') ? 'ms' : 'count';
+    shBtn.textContent = '占比：' + (CN.share === 'count' ? '次数' : '耗时');
+    savePrefs();
+  });
+  /* 约束：连线轮数 ≤ 显示轮数（显示收窄到 N 轮时，连线不该超过 N 轮） */
+  function lineOpts() {
+    if (!SCOPE.turns) return CN.turnOpts;
+    var out = CN.turnOpts.filter(function (v) { return v && v <= SCOPE.turns });
+    return out.length ? out : [SCOPE.turns];
+  }
+  function syncTurnBtns() {
+    var tn = $('tnBtn'), sc = $('scBtn');
+    if (tn) {
+      var tot = M.turn || 0;
+      tn.textContent = '连线轮数：' + (CN.turns || '全部') + (tot ? ' / 共 ' + tot + ' 轮' : '');
+    }
+    if (sc) sc.textContent = '显示轮数：' + (SCOPE.turns || '全部');
+  }
+  function clampLineTurns() {
+    if (!SCOPE.turns) return;
+    if (!CN.turns || CN.turns > SCOPE.turns) CN.turns = SCOPE.turns;
+  }
+
+  var tnBtn = $('tnBtn');
+  if (tnBtn) tnBtn.addEventListener('click', function () {
+    var opts = lineOpts();
+    var k = opts.indexOf(CN.turns);
+    CN.turns = opts[(k + 1) % opts.length];
+    syncTurnBtns();
+    savePrefs();
+  });
+  var scBtn = $('scBtn');
+  if (scBtn) scBtn.addEventListener('click', function () {
+    var k = SCOPE.opts.indexOf(SCOPE.turns);
+    SCOPE.turns = SCOPE.opts[(k + 1) % SCOPE.opts.length];
+    clampLineTurns();
+    syncTurnBtns();
+    savePrefs();
+    render();
+  });
+  /* 环显隐开关：多选，点一下切换一个 */
+  (function () {
+    var box = $('ringToggles');
+    if (!box) return;
+    box.innerHTML = '<b class="lb" style="margin-right:7px">环</b>' + RING_NAME.map(function (nm, i) {
+      var c = RING_COL[i];
+      return '<b class="chip' + (RINGVIS[i] ? ' on' : '') + '" data-ring="' + i +
+        '" style="color:' + c + ';border-color:' + (RINGVIS[i] ? c : 'rgba(190,200,215,.22)') + '">' + nm + '</b>';
+    }).join('');
+    box.addEventListener('click', function (e) {
+      var k = e.target && e.target.getAttribute && e.target.getAttribute('data-ring');
+      if (k == null) return;
+      var idx = +k;
+      RINGVIS[idx] = !RINGVIS[idx];
+      var c = RING_COL[idx];
+      e.target.className = 'chip' + (RINGVIS[idx] ? ' on' : '');
+      e.target.style.borderColor = RINGVIS[idx] ? c : 'rgba(190,200,215,.22)';
+      savePrefs();
+    });
+  })();
+
+  var rotBtn = $('rotBtn');
+  if (rotBtn) rotBtn.addEventListener('click', function () {
+    ROT.on = !ROT.on;
+    rotBtn.textContent = '环旋转：' + (ROT.on ? '开' : '关');
+    rotBtn.style.color = ROT.on ? 'var(--mid)' : 'var(--dim)';
+    savePrefs();
+  });
+  /* ---------------- 任意环上的节点：悬停看名字，点击看详情 ---------------- */
+  function hitAt(mx, my) {
+    if (!HIT.ox) return null;
+    var dx = mx - HIT.ox, dy = my - HIT.oy;
+    var r = Math.sqrt(dx * dx + dy * dy);
+    var ang = Math.atan2(dy, dx);
+    var best = null, bestD = 1e9;
+    for (var k = 0; k < HIT.items.length; k++) {
+      var it = HIT.items[k];
+      var d = Math.abs(r - it.r);
+      if (d > 12) continue;
+      var rel = ((ang - it.a0) % TAU + TAU) % TAU;
+      if (rel > (it.a1 - it.a0)) continue;
+      if (d < bestD) { bestD = d; best = it; }
+    }
+    return best;
+  }
+  function fmtMs(v) { return v >= 1000 ? (v / 1000).toFixed(1) + 's' : Math.round(v) + 'ms'; }
+  var tipEl = $('tip'), detEl = $('tdetail');
+  function showTip(it, mx, my) {
+    if (!tipEl) return;
+    tipEl.innerHTML = esc(it.label) + (it.sub ? '<em>' + esc(it.sub) + '</em>' : '');
+    tipEl.style.left = (mx + 14) + 'px';
+    tipEl.style.top = (my + 14) + 'px';
+    tipEl.classList.add('on');
+  }
+  function hideTip() { if (tipEl) tipEl.classList.remove('on'); }
+
+  function drow(k, v, bad) {
+    return '<div class="row"><span>' + esc(k) + '</span><b' + (bad ? ' style="color:var(--bad)"' : '') + '>' + v + '</b></div>';
+  }
+  function showDetail(it, mx, my) {
+    if (!detEl) return;
+    var h = '', list = '', listTitle = '';
+    if (it.kind === 'tool') {
+      var st = (M.sStats || []).filter(function (s) { return s.name === it.data.name; })[0];
+      if (!st) return;
+      h = '<h5>' + esc(cn(TOOL_CN, it.data.name) || it.data.name) + '<em>' + esc(it.data.name) + '</em></h5>' +
+        drow('调用次数', st.count) +
+        drow('累计 / 平均', fmtMs(st.ms) + ' / ' + fmtMs(st.count ? st.ms / st.count : 0)) +
+        drow('失败 / 最近', st.fail + ' / ' + ago(st.last) + '前', st.fail > 0);
+      listTitle = '最近几次调用';
+      fetchCalls(it.data.name);
+    } else if (it.kind === 'turn') {
+      var tr = (M.turnsList || []).filter(function (x) { return x.no === it.data.no })[0];
+      h = '<h5>轮次 ' + it.data.no + '<em>TURN</em></h5>' +
+        drow('你的请求', tr ? esc(tr.prompt || '—') : '—') +
+        drow('步数 / 工具', tr ? (tr.steps + ' / ' + tr.tools) : '—') +
+        drow('时长', tr ? fmtMs((tr.end || clockNow()) - tr.start) : '—') +
+        drow('交付', tr ? (tr.files + ' 个文件') : '—');
+    } else if (it.kind === 'step') {
+      var steps = (M.sSteps || []).filter(function (s) { return s.t >= it.data.t0 && s.t < it.data.t1 });
+      var tot = 0;
+      steps.forEach(function (s) { tot += Math.max(0, (s.end || clockNow()) - s.t) });
+      var tools = (M.sTools || []).filter(function (x) { return x.t >= it.data.t0 && x.t < it.data.t1 });
+      h = '<h5>步骤段<em>' + steps.length + ' 步</em></h5>' +
+        drow('时间窗', hhmmss(it.data.t0) + ' ~ ' + hhmmss(it.data.t1)) +
+        drow('累计耗时', fmtMs(tot)) +
+        drow('工具调用', tools.length) +
+        drow('涉及轮次', (steps[0] ? 'T' + steps[0].turn : '—'));
+      listTitle = '这几步';
+      list = steps.slice(-6).reverse().map(function (s) {
+        return '<div class="cmd"><span class="t">' + hhmmss(s.t) + '</span><span>T' + s.turn + ' · 第 ' + s.step +
+          ' 步 · ' + fmtMs(Math.max(0, (s.end || clockNow()) - s.t)) + '</span></div>';
+      }).join('');
+    } else if (it.kind === 'skill') {
+      var sk = (M.skills || [])[it.data.i] || {};
+      h = '<h5>' + esc(cn(SKILL_CN, sk.name) || sk.name || '技能') + '<em>' + esc(sk.name || '') + '</em></h5>' +
+        drow('加载次数', sk.uses || 0) +
+        drow('最近使用', sk.last ? ago(sk.last) + '前' : '—');
+    } else if (it.kind === 'job') {
+      var jb = (M.sJobs || []).filter(function (x2) { return x2.id === it.data.id })[0] || {};
+      h = '<h5>' + esc(cn(JOB_CN, jb.kind) || '后台任务') + '<em>' + esc(jb.state || '') + '</em></h5>' +
+        drow('运行时长', fmtMs((jb.end || clockNow()) - (jb.t || clockNow()))) +
+        drow('状态', esc(jb.state || '—'));
+      listTitle = '命令';
+      list = '<div class="cmd"><span>' + esc(String(jb.label || '').slice(0, 200)) + '</span></div>';
+    } else if (it.kind === 'approval') {
+      var ap = (M.approvalsList || [])[it.data.i] || {};
+      h = '<h5>审批<em>' + esc(ap.tool || 'tool') + '</em></h5>' +
+        drow('时间', hhmmss(ap.t)) +
+        drow('结果', esc(ap.outcome || '待定'), /deny|reject/i.test(ap.outcome || ''));
+    } else if (it.kind === 'change' || it.kind === 'deliv') {
+      var ch = it.data || {};
+      h = '<h5>' + (it.kind === 'deliv' ? '交付文件' : '文件变更') + '<em>T' + (ch.turn || '?') + '</em></h5>' +
+        drow('时间', hhmmss(ch.t)) +
+        drow('轮次', 'T' + (ch.turn || '?'));
+    }
+    detEl.innerHTML = h + (listTitle ? '<div class="sub" id="dsub">' + listTitle + '</div>' +
+      '<div id="dcalls">' + (list || '<div class="cmd" style="color:var(--dim)">载入中…</div>') + '</div>' : '');
+    detEl.classList.add('on');
+    detEl.style.left = Math.max(12, Math.min(window.innerWidth - 346, mx + 18)) + 'px';
+    detEl.style.top = Math.max(12, Math.min(window.innerHeight - 330, my - 20)) + 'px';
+  }
+
+  /* 工具的参数不进 /state（会把轮询放大），点开时按需拉 */
+  function fetchCalls(name) {
+    fetch('calls?tool=' + encodeURIComponent(name) + '&limit=6', { cache: 'no-store' })
+      .then(function (r) { return r.json() })
+      .then(function (j) {
+        var box = $('dcalls'), sub = $('dsub');
+        if (!box) return;
+        var cs = j.calls || [];
+        if (sub) sub.textContent = '最近 ' + cs.length + ' 次调用';
+        box.innerHTML = cs.map(function (c) {
+          var txt = String(c.args || '');
+          if (txt.length > 150) txt = txt.slice(0, 149) + '…';
+          return '<div class="cmd"><span class="t">' + hhmmss(c.t) + '</span>' +
+            '<span title="' + esc(c.args) + '">' + esc(txt) + '</span></div>';
+        }).join('') || '<div class="cmd" style="color:var(--dim)">—</div>';
+      })
+      .catch(function () {
+        var box = $('dcalls');
+        if (box) box.innerHTML = '<div class="cmd" style="color:var(--dim)">读不到调用记录</div>';
+      });
+  }
+
+  if (net) {
+    net.addEventListener('mousemove', function (e) {
+      var it = hitAt(e.clientX, e.clientY);
+      if (it) { showTip(it, e.clientX, e.clientY); net.style.cursor = 'pointer'; }
+      else { hideTip(); net.style.cursor = 'default'; }
+    });
+    net.addEventListener('mouseleave', hideTip);
+    net.addEventListener('click', function (e) {
+      var it2 = hitAt(e.clientX, e.clientY);
+      if (it2) showDetail(it2, e.clientX, e.clientY);
+      else if (detEl) detEl.classList.remove('on');
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && detEl) detEl.classList.remove('on');
+    });
+  }
+
+  var rpPlay = $('rpPlay');
+  if (rpPlay) rpPlay.addEventListener('click', function () {
+    if (!RP.on) replayCall('action=start&mode=seq&step=' + RPSTEPS[rpStepI]);
+    else if (RP.playing) replayCall('action=pause');
+    else if (RP.done) replayCall('action=restart&mode=seq&step=' + RPSTEPS[rpStepI]);
+    else replayCall('action=resume');
+  });
+  var rpSpd = $('rpSpeed');
+  if (rpSpd) rpSpd.addEventListener('click', function () {
+    rpStepI = (rpStepI + 1) % RPSTEPS.length;
+    rpSpd.textContent = RPSTEPS[rpStepI] + 'ms/条';
+    if (RP.on) replayCall('action=resume&step=' + RPSTEPS[rpStepI]);
+  });
+  var rpLive = $('rpLive');
+  if (rpLive) rpLive.addEventListener('click', function () { replayCall('action=stop'); });
+
+  var pickEl = $('pick');
+  if (pickEl) pickEl.addEventListener('change', function (e) {
+    fetch('select?session=' + encodeURIComponent(e.target.value || ''), { cache: 'no-store' })
+      .then(function () { return loadSessions() })
+      .then(function () { pull() })
+      .catch(function () { });
+  });
+  pull();
+  startStream();
+  requestAnimationFrame(function (ts) { last = ts; requestAnimationFrame(frame); });
+})();
+</script>
+
+
+</body></html>

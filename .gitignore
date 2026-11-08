@@ -1,0 +1,19 @@
+# 本地备份 / 草稿（不发布）
+instrument.bak.html
+*.bak.html
+*.bak.js
+dbg-eval.js
+patch-*.cjs
+fix-*.cjs
+
+# 截图：体积大，且画面里含有会话内容（命令、提问）
+shots/
+
+# 旧演示（保留在本地，作为历史）
+archive/
+
+# 依赖 / 系统
+node_modules/
+.DS_Store
+Thumbs.db
+*.log

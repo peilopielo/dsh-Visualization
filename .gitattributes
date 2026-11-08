@@ -1,0 +1,5 @@
+# 统一用 LF，避免跨平台 diff 噪音；Windows 批处理保留 CRLF
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.png binary
+*.jpg binary
