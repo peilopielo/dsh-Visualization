@@ -26,7 +26,8 @@
     "locale",
     "icon.svg",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "FAQ.md"
   ],
   "keywords": [
     "dsh",
