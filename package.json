@@ -51,10 +51,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/peilopielo/dsh-Visualization.git",
-    "directory": "dsh-visualization"
+    "url": "git+https://github.com/peilopielo/dsh-Visualization.git"
   },
-  "homepage": "https://github.com/peilopielo/dsh-Visualization/tree/main/dsh-visualization",
+  "homepage": "https://github.com/peilopielo/dsh-Visualization",
   "bugs": {
     "url": "https://github.com/peilopielo/dsh-Visualization/issues"
   }

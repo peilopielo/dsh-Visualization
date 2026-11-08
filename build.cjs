@@ -3,7 +3,7 @@
 const fs = require('fs')
 const path = require('path')
 
-const src = path.join(__dirname, '..', 'instrument.html')
+const src = path.join(__dirname, 'standalone', 'instrument.html')
 const out = path.join(__dirname, 'web', 'index.html')
 
 if (!fs.existsSync(src)) {

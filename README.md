@@ -1,195 +1,263 @@
-# DSH Visualization · session instrument
+# DSH Visualization — session instrument for DeepSeek Harness
 
-把**当前 DSH 会话的真实状态**画成一台仪表：编织网当内核，四层同心环表示会话 / 任务 / 技能 / 工具，右侧是一组实时表格，底部是真实事件流。
+A layered instrument for a live DSH session: a sidebar icon, a full panel showing the session's
+rings, turns, tools and background jobs.
 
-不是演示动画，也不是壁纸——**盯着看三秒，能说出它刚才做了什么、现在在做什么、花了多少**。
+**English** (below) · **[中文说明](#中文)** at the bottom.
+
+> The standalone version (open `standalone/start.cmd`, no DSH plugin needed) lives in [`standalone/`](standalone/).
+
+- **Seven rings**: ① session · ② steps · ③ skills · ④ tools · ⑤ jobs · ⑥ approvals · ⑦ changes — each one toggleable
+- **Turn timeline**: two lines per turn — number + steps/tools/duration, then the prompt you typed
+- **Connections**: per-step ladders (①→②→③→④) with dots running along them, or beams from the core
+- **Hover / click**: every node on every ring answers — hover for its name, click for details (tools list the last six actual commands)
+- **Turn scoping**: `show turns` / `line turns` knobs narrow the view to the last N turns
+- Every display option is remembered in `localStorage`
 
 ---
 
-## 快速开始
+# For users
 
-```
-双击 start.cmd                      # 起桥 + 开浏览器（推荐）
-```
+## Requirements
 
-或者手动：
+- **Node ≥ 22.15** in the host: session logs are zstd-compressed. Without support the panel says so
+  explicitly instead of rendering blank.
+- Session directory defaults to `~/.dsh/sessions`; if DSH stores data elsewhere, set `DSH_HOME`
+  or `DSHVIZ_SESSIONS_ROOT`.
+
+## Install
 
 ```powershell
-node bridge.cjs 8787                # 桥：读会话日志，提供 /state
-# 然后打开 http://127.0.0.1:8787
+# local directory (development)
+#   plugin_manager install_bundle, target = this directory
+# from npm (after publishing)
+#   search "dsh-visualization" on the Plugins page
 ```
 
-> `instrument.html` 也可以直接双击，但那样读不到数据，会显示 **未连接 bridge** 的空态。
-> 浏览器不允许 `file://` 页面读本地文件，所以必须有这个桥。
+A ring icon appears in the left rail; click it to open the instrument.
 
-### 看别的会话
+## Reading the panel
 
-页面左下角有个「会话」下拉，列出 `~/.dsh/sessions` 下**所有工作区**的会话（按最近写盘排序，显示短 id / 工作区 / 时间）：
+| Area | What it tells you |
+|---|---|
+| Centre number | current turn; `TOOL` / `THINKING` / `IDLE` above it |
+| ① session ring | context-window usage + the last 12 turn ticks |
+| ② step ring | time buckets; thicker = more time spent in that slice |
+| ③ skill ring | 16 slots; one lights up per loaded skill |
+| ④ tool ring | composition by call count (or by time — see `share`) |
+| ⑤ job ring | one arc per background job, length ∝ runtime |
+| ⑥ approval ring | one tick per approval, colour = outcome |
+| ⑦ change ring | one tick per file change; deliverables are taller |
+| Right column | session flow, context, jobs, turn timeline, tool totals |
+| Bottom | event log, grouped by turn |
 
-- 默认是 **自动 · 跟最新会话**：同一工作区里新开一个会话，它会自己切过去。
-- 选中某一个就**锁定**，不再跟着最新跑；选回「自动」恢复。
-- 命令行等价：`node bridge.cjs 8787 <sessionId>`。
+Direction matters: on ②–⑦ the newest data sits at 12 o'clock and older data goes clockwise.
 
-桥是**单会话**的。要同时盯两个会话，起两个桥用不同端口（`node bridge.cjs 8788`）。
+## The controls (bottom left)
 
-### 重放：把这个会话的历史从零演一遍
+| Control | Options |
+|---|---|
+| rings `①…⑦` | show/hide each layer; radii re-spread to fill the space |
+| `spin` | slow rotation of ②③④ |
+| `lines` | `ladders` / `beams` / `both` |
+| `share` | tool ring sized by `count` or by `time` |
+| `line turns` | how many turns get connectors (`2` by default) |
+| `show turns` | how many turns every panel covers |
+| `⧉ window` | open a separate window you can drag to another monitor |
+| `中 / EN` | switch language |
 
-左下角 `▶ 重播` —— 不是假数据，是把当前会话**自己的事件**按顺序一条一条放（**事件之间的空档全部抹掉**）：
+`line turns` can never exceed `show turns` — the connector count is clamped automatically.
 
-- 节奏是 `300 / 160 / 90 / 40 ms/条`（点按钮循环，越小越快），不是"按时间快进"——一个事件演完立刻放下一个，中间那段真实等待不留
-- `❚❚ 暂停` / `▶ 继续` / `↻ 重放` / `回到实时`
-- 进度显示 `事件 845 / 2556`，同时给出**虚拟时间**（会话当时几点）
-- 环、表、事件流全部按虚拟时间算，所以"多久之前"、光束指向、上下文进度都是当时的样子
+## Language
 
-桥这边等价于：
+The UI ships in Chinese and English. It starts from `navigator.language`, remembers your choice,
+and can be forced per page with `?lang=en` / `?lang=zh`.
 
-```
-/replay?action=start|pause|resume|restart|stop&mode=seq&step=90
-```
+## When something looks wrong
 
-`mode=seq` 是事件序列（默认）；`mode=time` 退回按时间快进（保留间隔，按 speed 压缩）。
-
-**两个限制**：重放的终点在开始时就固定了，重放期间会话继续增长不会补进来；切换会话会自动退出重放。
+| Symptom | Cause |
+|---|---|
+| Panel says "this runtime does not support zstd" | Node < 22.15 in the host |
+| Panel says the session directory is empty | no session has run in this profile yet |
+| Panel is empty with 403 in the network tab | you are not on loopback; set `allowRemote: true` (only on trusted machines) |
+| A step ring segment is dim and has no line | that step is outside `line turns` — raise it, or lower `show turns` |
+| A bright segment has no line | that step made no tool calls (a text-only step) |
 
 ---
 
-## 文件地图
+# For plugin developers and agents
 
-| 文件 | 作用 | 能不能改 |
+## Files
+
+```
+index.js        host entry: registers the /<basePath> route, injects origin + policy
+fold.cjs        the whole host brain: session discovery, zstd frames, incremental fold, HTTP/SSE routes
+client.js       client half: sidebar icon + a main-panel iframe pointing at the page
+web/index.html  the instrument page (GENERATED — do not edit by hand)
+build.cjs       regenerates web/index.html from ../instrument.html
+cordis.patch.yml / locale/*.json / icon.svg   metadata
+```
+
+## Editing rules (the part that bites)
+
+1. **The page has a single source: `instrument.html`** in the repository root. Edit that, then run
+   `node build.cjs`. The build only rewrites absolute endpoints (`/state` → `state`) so the page works
+   under a path prefix. Editing `web/index.html` directly will be overwritten.
+2. **Host changes need a DSH restart.** `fold.cjs` and `index.js` are ESM modules; toggling the plugin
+   only remounts the route — the loaded module is not re-evaluated. `client.js` and `web/*` pick up on
+   a page refresh.
+3. **Debug globals are gated**: `window.__M` / `__HIT` / `__CHAIN` only exist with `?debug=1`
+   (or `#debug`, or `localStorage.dshviz.debug=1`).
+4. **Never rewrite the page with a one-line shell command.** It has been destroyed that way once.
+   Use edits, or author a small `.cjs` patch script and run it.
+
+## Data flow
+
+```
+~/.dsh/sessions/<ws>/<session>/session.v<N>.jsonl.zstd
+  └─ zstdFrames()   parse RFC 8878 headers+blocks → exact frame boundaries
+  └─ unzstdAll()    decode only the frames appended since last read
+  └─ makeFolder()   reducer: push(newEvents) → result()  (never re-scans history)
+  └─ /dsh-visualization/state (one-shot)   /dsh-visualization/events (SSE, pushes only on change)
+  └─ page: applyState() → render() (DOM) + draw() (canvas)
+```
+
+Cost at ~8.7k events: first fold 240–260 ms, then 7–12 ms per change. Frame parsing is exact, so a
+partially-written tail frame simply stops the walk and is picked up next time.
+
+## Adding things
+
+**A new ring** — three places, all inside `instrument.html`:
+`RINGVIS` / `RING_NAME` / `RING_COL` (state + labels), the `if (RINGVIS[n])` drawing block in `draw()`,
+and `hitReg({ kind, r, a0, a1, label, data })` so hover/click works. Add a detail renderer branch in
+`showDetail()` if the card needs fields.
+
+**A new language** — `EN` map (whole-string matches), `EN_RULES` (templated phrases), `EN_FN`
+(replacements that need logic). `LANG` currently accepts `zh` | `en`; to add a third, turn it into a
+list and key the dictionaries by code.
+
+**A new tool kind colour** — `toolColor(name)` in `instrument.html`.
+
+## Config
+
+| Field | Default | Meaning |
 |---|---|---|
-| `instrument.html` | **仪表本体**，单文件、无依赖、无构建步骤 | ✅ 视觉与布局都在这里 |
-| `bridge.cjs` | 读 `session.v4.jsonl.zstd` → 折叠成小 JSON → `/state` | ✅ 数据口径在这里 |
-| `start.cmd` | 起桥 + 开页面 | ✅ |
-| `shot.cjs` | 截图/取值工具（CDP over pipes），开发用 | ✅ |
-| `shots/` | 现役截图（live / offline） | — |
-| `archive/` | 旧版：HALOFLUX 引擎 + 演示剧本那套 | 只读，见 `archive/README.md` |
+| `basePath` | `/dsh-visualization` | route prefix |
+| `allowRemote` | `false` | allow non-loopback peers. **This exposes session logs to anyone who can reach the port.** |
 
----
+## Routes
 
-## 架构
+| Path | Purpose |
+|---|---|
+| `/dsh-visualization/` | the page |
+| `/dsh-visualization/state` | folded state, one-shot (`?session=<id>` to pin a session) |
+| `/dsh-visualization/events` | same payload over SSE; pushed only when something changed (250 ms check) |
+| `/dsh-visualization/sessions` | session list |
+| `/dsh-visualization/select?session=` | switch the pinned session |
+| `/dsh-visualization/calls?tool=&limit=` | recent calls of one tool, fetched on demand |
+| `/dsh-visualization/replay?action=` | replay a session's history |
 
-```
-~/.dsh/sessions/<工作区>/<session-id>/session.v4.jsonl.zstd
-        │  node zlib.zstdDecompressSync（Node ≥ 22.15）
-        ▼
-    bridge.cjs ── 折叠事件 → /state（约 25KB，900ms 刷新）
-        ▼
-    instrument.html ── 每 900ms fetch 一次 → 渲染
-```
+Limits: loopback-only by default, gzip on state, SSE capped at 8 concurrent clients.
 
-桥只读，不写任何东西。默认取**当前工作区最新**的会话；要指定别的：
-`node bridge.cjs 8787 session-<id>`。
+## Performance notes
 
----
-
-## 数据映射
-
-| 画面 | 画什么 | 来自哪个事件 |
+| Stage | Before | Now |
 |---|---|---|
-| ① 会话环 | 整圈 + 进度弧 = 上下文占用；外圈刻度 = 轮次 | `request/context.contextWindow`、`assistant/message.usage` |
-| ② 步骤环 | 整场每一步都在，按时间分格；**格长/格粗 = 那段时间累计耗时** | `step/start` 的时间差 |
-| ③ 技能环 | 16 个稀疏刻度，加载一个亮一个。技能是稀疏事件（本会话只有 1 次），一亮就代表"用过" | `tool/call` 里 `name="skill"` |
-| ④ 工具环 | **构成环**：每种工具一段弧，弧长 ∝ 次数（或耗时，可切换），每段至少 3° 保证可见。颜色**刻意避开 ①白/②粉/③紫**：命令=琥珀 `#ffc46b`、写改=珊瑚 `#ff7a5c`、读查=薄荷 `#7fe3c0`、网络=蓝 `#8fb8ff`、技能类=天蓝 `#8fd0e8`、其他=冷灰 `#a8b4c4` | `tool/call` 按 name 聚合 |
-| 连线（层层递进） | **每一步一条阶梯**：① 会话环 → ② 步骤环 → ③ 技能环 → ④ 工具环（工具的落点 = 它那种工具的扇区）。不跨步连线，所以线只往外走、不会横穿中心。连线画在**环的下面**（先画线、再画环；用上一帧的几何，延迟 1 帧看不出来），所以不会再挡视线。**每条阶梯上有沿路径移动的光点**（约 1.8s 走完一遍，按步骤顺序错开相位）。**只有这一步真的加载了技能，折线才绕一下 ③ 层**，否则 ② 直接连到 ④。同理，这一步的时间窗里如果发生了后台任务 / 审批 / 文件变更，折线会继续往外接到 ⑤ / ⑥ / ⑦（每层最多接 2 个点）。最近 N 轮都画（N 可调 1/2/3/5/8），高亮的是"有步骤的最新一轮" | `step/start` + `tool/call`（带 turn/step） |
-| 光束（核心 → 环） | 从内核射向**此刻正在运行**的调用所在位置；几个并发就几条，头部带光斑并向外冲一小段；空转时射一条指向当前步骤的呼吸束 | 未完成的 `tool/call`（`tool/result` 还没到） |
-| ⑤ 任务环（可选） | 后台任务，弧长 ∝ 运行时长；运行中亮青 / 完成暗青 / 被杀灰 / 失败红 | `job/registered` / `job/settled` |
-| ⑥ 审批环（可选） | 每次审批一根刻度：绿=放行 / 红=拒绝 / 琥珀=待定 | `approval/asked` / `approval/decided` |
-| ⑦ 变更环（可选） | 每次文件改动一根小刻度，交付物是大刻度（琥珀） | `workspace/changes` / `deliverables/presented` |
-| 顶栏 进度条 | 会话进度：**一轮一段**，宽度 ∝ 该轮时长；当前轮亮琥珀，报错的轮次偏红。左端标 `轮次 / 总数` | `turn/start` / `turn/end` |
-| 右栏 会话逻辑 | 会话 → 步骤 → 技能 → 工具 → 用量（谁驱动了谁） | 上面几类的计数 |
-| 右栏 上下文 | 输入 / 输出 / 缓存 / 占用% / tok/s | `assistant/message.usage` |
-| 右栏 后台任务 | 长命令等还在后台跑的东西 | `job/registered` / `job/settled` |
-| 右栏 轮次时间线 | 一轮两行：`T<n>` + 步数 / 工具数 / 时长 / 交付数，下面一行是**你当时的请求**。最新在上，当前轮高亮 | `turn/start`·`turn/end`·`user/message`(kind=user)·`step/start`·`tool/call` |
-| 右栏 工具统计 | 每种工具累计：次数 / 累计耗时 / 最近一次（**常驻，不滚动**） | 全程 `tool/call` 聚合 |
-| 底表 | **按轮分组**的事件流：每组表头是 `T<n> · 你当时的请求` + 该轮步数/工具数；组内是时间 / 层 / 名称 / 详情 / 耗时 / 成败 | 各事件 + `tool/result` |
+| Transport | 566 KB every 900 ms | 51 KB gzip, only on change |
+| Decompression | whole log each time | only appended zstd frames |
+| Fold | every event each time | only new events |
+| Idle traffic | continuous polling | zero (15 s heartbeat only) |
 
-**七层环可选**：左下角「环」一排色块，每块用自己的层色，点一下切换显隐（可多选）。**环少会自动摊开、环多会自动收紧**——半径把 `0.24×base ~ 0.66×base` 均分给当前可见的环数。
+## Known limitations
 
-**旋转**：② 步骤 / ③ 技能 / ④ 工具 三环各自匀速转，速度不同（0.030 / 0.018 / 0.090 rad/s，
-一圈约 3.5 分 / 5.8 分 / 70 秒）；① 会话环永远不转——它是坐标系。左下角「环旋转」可一键关掉。
+- **Memory grows with the session**: the reducer keeps derived state for every event. Steps/tools/log are
+  capped; counters are cumulative. At ~100k events `result()` still sorts 1.2k steps and 1.5k tools,
+  roughly 10–20 ms per frame.
+- **Two UI languages only** (zh/en).
+- **Read-only**: the instrument never writes session files.
 
-> 注意：**转了之后「12 点 = 现在」就不再成立**。最新节点会跟着环漂走，光束始终指向它的真实位置。
-> 关掉旋转就回到"12 点 = 现在"的读法。
+## License
 
-**折线的跨度**：连线用的是「事件时间 ÷ 整场时长」定位，所以跨度由会话长度决定——2 小时的会话里，一步 20 秒只占 1°，
-折线看起来是紧凑的一小段。这是**有意的取舍**（2026-11-07 定）：环保持整场时间轴，折线只表达**顺序**，不表达跨度。
-想让折线张开，就把 `spanMs` 改成"最近 30 分钟"并跳过超窗的旧点——代价是环上不再有全场的历史点（统计表不受影响）。
+**[PolyForm Noncommercial License 1.0.0](./LICENSE)** — Copyright (c) 2026 Ryder191 (RYDER CODE / Ms MAIKEBAIs CAT).
 
-**所有面板都常驻**：不按窗口/行数丢弃，超长就在面板内滚动（事件 300 条、任务 200 个、工具/技能全程累计）。`bridge.cjs` 里的数组上限就是保留条数。
-
-**所有英文名都有中文说明**：工具表里是「执行命令 · pwsh」，技能是「沙箱权限诊断 · diagnose-windows-sandbox-acl」，
-后台任务是「后台命令 · pwsh」。映射表在 `instrument.html` 顶部的 `TOOL_CN` / `SKILL_CN` / `JOB_CN`，加新工具往那儿加一行就行。
-
-**两个轮数开关**（左下角）：连线轮数 控制画几条轮次的阶梯，显示轮数 控制所有面板/四环只看最近几轮，两者都有「全部」。
-**交互**：鼠标悬停在 ④ 工具环的扇区上会显示工具名，点击弹出详情卡（次数 / 累计 / 平均 / 失败 / 最近使用 + **最近 6 次实际的参数**，比如 pwsh 的具体命令行；悬停某一行可看完整命令，最长 240 字），点空白或 Esc 关闭。命中测试是 canvas 内的角度 + 半径判断。
-
-**约束**：连线轮数 永远 ≤ 显示轮数——显示收窄到 2 轮时，连线只能在 1/2 之间切，选不到 3 以上；如果先选了连线 8 再把显示收到 2，连线会自动降到 2。
-
-也可以用地址栏固定视图：#ct=0（连线全部）/ #sc=1（只看最近 1 轮）。
-
-**筛选**：三张长表各有一排筛选片，点一下只留那一类，计数会显示「显示 N」。
-- 后台任务：全部 / 运行中 / 已结束
-- 工具统计：全部 / 有失败 / 耗时 >1s
-- 事件表：全部 / 工具 / 任务 / 会话 / 技能 / 用户
-
-筛选状态只存在内存里（刷新页面回到"全部"），不写 localStorage。
+- **Noncommercial only.** Personal use, study, research, teaching and hobby projects are free.
+  Selling it, bundling it into a paid product, using it inside a company, or paid support is **not** permitted.
+- **This is a derivative of HALOFLUX** (visual language, layout, rings, palette —
+  https://github.com/Ryder191/haloflux). Per HALOFLUX's terms, derivatives must stay noncommercial and keep
+  the attribution.
+- **Keep the notices.** If you redistribute, pass along this LICENSE and its two `Required Notice:` lines.
+- The page's bottom-right credit line (`DSH Visualization by Ryder191 · PolyForm NC · visual language: HALOFLUX`)
+  must stay.
 
 ---
 
-## 踩过的坑（别重复踩）
+# 中文
 
-1. **`session` 事件的字段在事件顶层**，不在 `data` 里（其余事件都在 `data`）。
-2. **`tool/result` 的调用 id 是 `data.message.source.callId`**，不是 `data.toolCallId`——按后者匹配会导致"待完成调用"永远清不掉、状态永远卡在 `TOOL`、耗时全空。
-3. `text-delta` 是 transient 事件，**不落盘**，所以轮询日志只能看到 step 粒度的"正在输出"，做不到逐字。
-4. 子 agent 是**独立 session**（`delegationDepth: 1`），父会话日志里没有 spawn 事件；所以 ② 环画的是后台 job，不是 agent。
-5. 时间戳是 epoch 毫秒；别把 `performance.now()` 当基准喂给 `Date`。
-6. 两个元素**不能同名 id**：`getElementById` 只返回第一个，表格会静默变空。
-7. **画布要收鼠标事件，覆盖层必须 `pointer-events:none`**：`.dash` 一层铺满全屏，它一旦没收起事件，
-   环上的悬停/点击就全被它吞掉——`elementFromPoint()` 会返回 `.rings` 而不是 `#net`。
-   用合成事件 `dispatchEvent` 直接派给 canvas 测不出来（绕过了真实命中链路），必须用 `elementFromPoint` 验。
-8. **作用域与初始化顺序（这一族已经坑过 5 次，统一按下面三条来）**
-   - **canvas 上下文只有一种来源**：要么所有绘制函数都接收 `ctx` 参数，要么全部用模块级 `X2`（`draw()` 开头 `X2 = nx`）。
-     **绝不能一半用 `draw()` 里的局部 `X`、一半用模块级函数**——模块级函数拿不到局部的 `X`，一调用就 `ReferenceError`，
-     `draw()` 直接中断，表现是"整个画布只剩中心那团光"。
-   - **`draw()` / `render()` 要读的数组必须在 `M` 初始化时就给空数组**（`sSteps / sJobs / sTools / sLog / sStats`），
-     否则首帧读到 `undefined`、`.filter` 抛错、RAF 循环断掉，画面冻在最后一帧。
-   - **`var` 会提升但值是 `undefined`**：先引用后定义的变量（典型是 `stepSec`）不会报语法错，运行时才炸。
-     凡是 `render()` 里跨段使用的值，统一定义在函数开头。
-9. **绝不用单行命令整篇覆盖 `instrument.html`**：本文件曾被一条参数写错的 `node -e` 覆盖成 15 字节，全丢。
-   改代码一律用 `edit` 工具（改片段）或先写 `.cjs` 补丁脚本再执行；大改之前先 `Copy-Item instrument.html instrument.bak.html`。
+把 DeepSeek Harness 的会话画成一台**分层仪表**：侧栏点一下，中间面板显示当前会话的环、轮次、工具和后台任务。
 
-## 源码被覆盖后怎么救
+## 使用说明
 
-桥有 `POST /savehtml`：把**浏览器里还开着的那一页**的 DOM 存回磁盘（`instrument.recovered.html`）。
-在页面控制台里跑一句：
+**环境要求**：宿主 Node ≥ 22.15（会话日志是 zstd）。会话目录默认 `~/.dsh/sessions`，
+DSH 装在别处时用环境变量 `DSH_HOME` 或 `DSHVIZ_SESSIONS_ROOT` 指过去。
 
-```js
-fetch('/savehtml',{method:'POST',body:document.documentElement.outerHTML}).then(r=>r.json()).then(console.log)
-```
+**安装**：本地目录用 `plugin_manager install_bundle` 指向本目录；发布后可在插件页搜索 `dsh-visualization`。
+安装后左侧栏出现环图标，点开即是仪表盘。
 
-拿到之后：补 `<!doctype html>`；清掉运行时塞进 `#rows / #turnTable / #taskTable / #callTable / #ringToggles / #tstrip / #tip / #tdetail` 的内容；
-再按会话日志把最后一次改动补上（`read`/`edit` 的 old/new 都在日志里）。
+**怎么读**：中心数字是当前轮次，上方是状态（`TOOL`/`THINKING`/`IDLE`）。① 会话环是上下文占用 + 最近
+12 轮刻度；② 步骤环按时间分格，格子越粗表示那段时间花得越久；③ 技能环 16 格，加载一个亮一个；
+④ 工具环按调用次数（或耗时）分扇区；⑤ 任务环每个后台任务一段弧，弧长 = 运行时长；⑥ 审批环每次审批一根
+刻度；⑦ 变更环每次文件改动一根刻度。**12 点方向是最新的，越旧越顺时针**。
 
-**日志重放不可靠**：PowerShell 写文件时的编码、`Remove-Item` 顺序都会让重放结果和原文件对不齐，试过一次，重放出来的文件语法都过不了。别把时间花在这条路上。
+**控件**（左下角）：七个环开关、环旋转、连线模式（阶梯/光束/两者）、占比口径、连线轮数、显示轮数、
+`⧉ 新窗口`（拖到副屏）、`中 / EN`。`连线轮数` 不会超过 `显示轮数`，超了会自动钳制。
 
----
+**语言**：默认跟随 `navigator.language`，选了就记住；也可以 `?lang=en` / `?lang=zh` 临时指定。
 
-## 开发工具
+**常见现象**：
 
-```powershell
-node shot.cjs http://127.0.0.1:8787/ shots/live.png 1920 1080
-$env:SHOT_EVAL='JSON.stringify(window.__M.state)'; node shot.cjs ...   # 顺手在页面里取值
-```
+| 现象 | 原因 |
+|---|---|
+| 面板说"不支持 zstd" | 宿主 Node < 22.15 |
+| 面板说会话目录是空的 | 这个 profile 还没跑过对话 |
+| 面板空白、网络面板里 403 | 不是本机访问；需要远程看才把 `allowRemote` 打开 |
+| 某个格子暗、没有线 | 它不在「连线轮数」范围内 |
+| 格子亮、没有线 | 这一步没有工具调用（纯文字步） |
 
-`shot.cjs` 走 Chromium 的 `--remote-debugging-pipe`（CDP 消息走子进程 stdio 3/4），
-绕开本机被挡的命名管道截图——这是这台机器上唯一能自动截图的路子。
+## 给 agent / 开发者的编辑说明
 
----
+**文件**：`index.js`（宿主入口，注册路由 + 注入 origin/策略）、`fold.cjs`（会话发现、zstd 帧解析、
+增量折叠、HTTP/SSE 路由）、`client.js`（侧栏图标 + 面板 iframe）、`web/index.html`（**生成物**）、
+`build.cjs`（从主仓库 `instrument.html` 重新生成）。
 
-## 授权与署名
+**四条规矩**：
 
-- **[PolyForm Noncommercial License 1.0.0](LICENSE)** —— Copyright (c) 2026 Ryder191
-  （RYDER CODE / Ms MAIKEBAIs CAT）。**仅限非商业用途**：出售、集成进付费产品、公司内部使用一律禁止。
-- 本项目是 **HALOFLUX** 的衍生作品，按 HALOFLUX 的条款必须同为非商业并保留署名。
-- 转发时请附带 LICENSE 与其中两行 `Required Notice:`。
-- 视觉语言来自 **HALOFLUX**（Ryder191）。页面右下角的署名别删。
+1. **页面只有一个源**：改 `../instrument.html`，再跑 `node build.cjs`。直接改 `web/index.html` 会被覆盖。
+2. **改宿主必须重启 DSH**：`fold.cjs` / `index.js` 是 ESM，插件开关只会重挂路由，不会重新求值。
+   `client.js` 和 `web/*` 刷新页面即可。
+3. **调试全局是门控的**：`window.__M` / `__HIT` / `__CHAIN` 只在 `?debug=1` 时存在。
+4. **绝不用单行命令整篇覆盖页面**——它被这样毁过一次。用编辑工具，或写一个 `.cjs` 补丁脚本再执行。
+
+**数据流**：`张日志 → zstdFrames()（按 RFC 8878 精确切帧）→ 只解新帧 → makeFolder().push(新事件) →
+/dsh-visualization/state（一次性）或 /dsh-visualization/events（SSE，变化才推）→ applyState() → render() + draw()`。
+
+**8.7k 事件的开销**：首次 240~260ms，之后每次变化 7~12ms。
+
+**加东西**：新环 = `RINGVIS`/`RING_NAME`/`RING_COL` + `draw()` 里的绘制块 + `hitReg(...)` 登记 +
+`showDetail()` 的详情分支；新语言 = `EN` 词典 + `EN_RULES` 正则 + `EN_FN` 逻辑替换，并把 `LANG`
+从 `'zh'|'en'` 改成列表；新工具配色 = `toolColor()`。
+
+**配置**：`basePath`（默认 `/dsh-visualization`）、`allowRemote`（默认 `false`，打开等于把会话日志暴露给能访问该端口的人）。
+
+**已知限制**：内存随会话线性增长（十万条时每帧 `result()` 约 10~20ms）；界面只有中英两门语言；
+仪表只读，从不写会话文件。
+
+## 许可证
+
+**[PolyForm Noncommercial License 1.0.0](./LICENSE)** —— Copyright (c) 2026 Ryder191（RYDER CODE / Ms MAIKEBAIs CAT）。
+
+- **仅限非商业用途**：个人学习、兴趣项目、研究、教学可自由使用、修改、分享。
+  **禁止**：出售、集成进付费产品、在公司内部或代表公司使用、接单或有偿项目。
+- **本项目是 HALOFLUX 的衍生作品**（视觉语言、布局、环与配色均来自
+  https://github.com/Ryder191/haloflux）。按 HALOFLUX 的条款，衍生作品必须同为非商业并保留署名。
+- **保留声明**：转发时附带本 LICENSE 与其中的两行 `Required Notice:`。
+- 页面右下角署名（`DSH Visualization by Ryder191 · PolyForm NC · visual language: HALOFLUX`）不得删除。
