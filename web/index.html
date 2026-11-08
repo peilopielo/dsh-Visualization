@@ -979,6 +979,21 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
       for (var cq = 0; cq < CHAIN_PREV.length; cq++) {
         var ce = CHAIN_PREV[cq], cps = ce.pts;
         for (var cp = 1; cp < cps.length; cp++) segLine(cps[cp - 1], cps[cp], ce.bright, ce.fr);
+        /* 用到技能的那一步：③ 上加发光环 + 两段高亮，否则技能环上永远是个空环 */
+        if (ce.skill) {
+          var sp = ce.skill, si = cps.indexOf(sp);
+          var hg = X.createRadialGradient(sp.x, sp.y, 0, sp.x, sp.y, 15);
+          hg.addColorStop(0, 'rgba(150,200,255,.42)');
+          hg.addColorStop(1, 'rgba(150,200,255,0)');
+          X.fillStyle = hg; X.beginPath(); X.arc(sp.x, sp.y, 15, 0, TAU); X.fill();
+          X.strokeStyle = 'rgba(160,205,255,.9)'; X.lineWidth = 1.8;
+          X.beginPath(); X.arc(sp.x, sp.y, 3.6, 0, TAU); X.stroke();
+          X.strokeStyle = 'rgba(150,200,255,.6)'; X.lineWidth = 2;
+          X.beginPath();
+          if (si > 0) { X.moveTo(cps[si - 1].x, cps[si - 1].y); X.lineTo(sp.x, sp.y); }
+          if (si >= 0 && si < cps.length - 1) { X.moveTo(sp.x, sp.y); X.lineTo(cps[si + 1].x, cps[si + 1].y); }
+          X.stroke();
+        }
         /* 移动光点：按路径长度插值 */
         var lens = [], tot = 0;
         for (var cl = 1; cl < cps.length; cl++) {
@@ -1128,6 +1143,32 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
           label: (sk ? (cn(SKILL_CN, sk.name) || sk.name) : '技能'),
           sub: sk ? sk.name : '', data: { i: i }
         });
+      }
+    }
+    /* 技能是被调用的稀疏事件：给它一条自己的连线，别指望"某一步用了 skill"那条阶梯 */
+    if (M.skills.length) {
+      var nowSk = clockNow();
+      var spanSk = RSPAN[1] || (M.sSteps && M.sSteps.length
+        ? Math.max(120000, nowSk - M.sSteps[0].t) : 120000);
+      for (i = 0; i < M.skills.length && i < 16; i++) {
+        var skI = M.skills[i];
+        var aSk = rotOf(2, t) - Math.PI / 2 + TAU * i / 16;
+        var px = ox + Math.cos(aSk) * rr, py = oy + Math.sin(aSk) * rr;
+        var age = nowSk - (skI.last || 0);
+        if (age >= 0 && age <= spanSk) {
+          var aTo = -Math.PI / 2 + (age / spanSk) * TAU + rotOf(1, t);
+          var qx = ox + Math.cos(aTo) * R[1], qy = oy + Math.sin(aTo) * R[1];
+          X.strokeStyle = rgba(COL.skill, 0.8); X.lineWidth = 2.6;
+          X.beginPath(); X.moveTo(px, py); X.lineTo(qx, qy); X.stroke();
+          X.beginPath(); X.arc(qx, qy, 3, 0, TAU);
+          X.fillStyle = rgba(COL.skill, 0.95); X.fill();
+        }
+        var hgS = X.createRadialGradient(px, py, 0, px, py, 19);
+        hgS.addColorStop(0, rgba(COL.skill, 0.75));
+        hgS.addColorStop(1, rgba(COL.skill, 0));
+        X.fillStyle = hgS; X.beginPath(); X.arc(px, py, 19, 0, TAU); X.fill();
+        X.beginPath(); X.arc(px, py, 4.2, 0, TAU);
+        X.fillStyle = rgba(COL.skill, 0.95); X.fill();
       }
     }
     }
@@ -1404,15 +1445,20 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
             return x5.turn === s5.turn && x5.step === s5.step;
           });
           var usedSkill = stepTools.some(function (x5) { return x5.name === 'skill'; });
+          var skillPt = null;
+          if (usedSkill) {
+            /* ③ 技能环只落一个点，再向 ④ 扇开（原来每个工具都插一个 ③ 点，会来回跳） */
+            var aK0 = (SKILL_ANG == null)
+              ? (segMap['skill'] != null ? segMap['skill'] : -Math.PI / 2)
+              : SKILL_ANG;
+            skillPt = { x: ox + Math.cos(aK0) * R[2], y: oy + Math.sin(aK0) * R[2] };
+            path.push(skillPt);
+          }
           var used = 0;
           for (var tj = 0; tj < stepTools.length && used < 12; tj++) {
             var tl5 = stepTools[tj];
             var aT5 = segMap[tl5.name];
             if (aT5 == null) continue;
-            if (usedSkill) {
-              var aK = (SKILL_ANG == null) ? aT5 : SKILL_ANG;
-              path.push({ x: ox + Math.cos(aK) * R[2], y: oy + Math.sin(aK) * R[2] });
-            }
             path.push({ x: ox + Math.cos(aT5) * R[3], y: oy + Math.sin(aT5) * R[3] });
             used++;
           }
@@ -1443,7 +1489,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
           /* 这里只攒几何，真正的绘制在下一帧开头（画环之前）完成 —— 线在环下面 */
           if (path.length > 1) {
             CHAIN_PREV.push({
-              pts: path, bright: bright, fr: fr5,
+              pts: path, bright: bright, fr: fr5, skill: skillPt,
               phase: (i / Math.max(1, arr3.length)) * 0.8
             });
           }
