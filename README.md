@@ -36,6 +36,8 @@ rings, turns, tools and background jobs.
 
 A ring icon appears in the left rail; click it to open the instrument.
 
+Or from npm: pm i dsh-visualization (package: https://www.npmjs.com/package/dsh-visualization).
+
 ## Reading the panel
 
 | Area | What it tells you |

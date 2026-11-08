@@ -1,7 +1,7 @@
 {
   "name": "dsh-visualization",
-  "version": "0.1.0",
-  "description": "DSH VISUALIZATION — a session instrument: rings, turns, tools and background jobs of the live DSH session.",
+  "version": "0.1.1",
+  "description": "DSH Visualization — a session instrument: rings, turns, tools and background jobs of a live DeepSeek Harness session.",
   "type": "module",
   "main": "index.js",
   "exports": {
