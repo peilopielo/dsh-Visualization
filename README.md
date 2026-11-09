@@ -119,7 +119,12 @@ same Chromium engine Edge uses, so the panel runs at the display's frame rate wi
 3. Drag the zip into Lively (or **Add Wallpaper → open file** → the extracted `index.html`)
 
 The page finds the plugin on `127.0.0.1:8799` by itself; if DSH is not running it shows a hint and
-retries every 5 seconds. The wallpaper is display-only — clicking the rings belongs in the DSH panel.
+retries every 5 seconds.
+
+**The panel stays interactive on the desktop** — Lively forwards mouse input to the wallpaper, so the
+ring toggles, turn pickers and detail cards all work directly on the background. If that makes desktop
+icons hard to click, Lively's `Settings → desktop icons` toggle or per-wallpaper input setting turns
+the forwarding off.
 
 ### Wallpaper Engine (screenshot mode)
 
@@ -327,7 +332,9 @@ DSH 装在别处时用环境变量 `DSH_HOME` 或 `DSHVIZ_SESSIONS_ROOT` 指过�
 3. 把 zip 拖进 Lively（或者 **添加壁纸 → 打开文件** → 选解压后的 `index.html`）
 
 页面会自己找到插件的 `127.0.0.1:8799`；DSH 没开时显示提示并每 5 秒重试。
-壁纸只负责显示——点环、看详情去 DSH 侧栏面板。
+
+**桌面上可以直接操作面板**——Lively 会把鼠标事件转给壁纸，环开关、轮次选择、详情卡片都能在桌面上点。
+如果这导致桌面图标不好点，在 Lively 设置里关掉图标显示或该壁纸的输入转发即可。
 
 ### Wallpaper Engine（截图模式）
 
