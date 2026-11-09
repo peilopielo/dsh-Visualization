@@ -1,4 +1,4 @@
-param([string]$Src = "D:\project\dsh-Visualization\wallpaper\debug.html", [int]$Monitor = 1, [string]$Shot = "dbg")
+param([string]$Src = "D:\project\dsh-Visualization\wallpaper\_experiments\debug.html", [int]$Monitor = 1, [string]$Shot = "dbg")
 $we = "d:\software\steam\steamapps\common\wallpaper_engine"
 $proj = "$we\projects\myprojects\DSH-Visualization"
 

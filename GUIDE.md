@@ -125,6 +125,8 @@ node wallpaper-live.cjs 200 78     # ≈4.9 fps, 200 KB/frame
 Then set `wallpaper/live.html` as a Wallpaper Engine web wallpaper. A low-CPU variant (`node
 wallpaper-capture.cjs 8`) refreshes every 8 seconds instead.
 
+Full route comparison and the port fallback: [`wallpaper/README.md`](wallpaper/README.md).
+
 ![Event log](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-log.png)
 
 ## 9. Troubleshooting
@@ -249,6 +251,8 @@ node wallpaper-live.cjs 200 78     # ≈4.9 fps，每帧 200 KB
 ```
 
 然后把 `wallpaper/live.html` 设为 WE 的网页壁纸。低 CPU 版用 `node wallpaper-capture.cjs 8`（8 秒一帧）。
+
+三种壁纸的完整对比和端口回退规则见 [`wallpaper/README.md`](wallpaper/README.md)。
 
 ![事件表](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-log.png)
 

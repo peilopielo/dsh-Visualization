@@ -11,7 +11,7 @@ For using the plugin see [GUIDE.md](GUIDE.md).
 
 ```powershell
 node build.cjs                  # standalone/instrument.html → web/index.html
-node make-wallpaper.cjs         # web/index.html → wallpaper/index.html (adds <base>, drops -webkit-line-clamp)
+node make-wallpaper.cjs         # web/index.html → wallpaper/_experiments/index.html (adds <base>, drops -webkit-line-clamp)
 node make-wallpaper-full.cjs    # full page with minimal CSS (WE experiment, see §9)
 ```
 
@@ -29,7 +29,7 @@ plugin toggle only remounts routes, it does not re-evaluate loaded ESM.
 | `index.js` | host entry: registers the route, injects origin/policy, starts the helper |
 | `client.js` | client half: sidebar icon + main-panel iframe |
 | `build.cjs` | regenerates `web/index.html` from the source page |
-| `wallpaper/` | wallpaper pages + Lively package |
+| `wallpaper/` | wallpaper pages + Lively package + `_experiments/` (dead ends, see its README) |
 | `wallpaper-live.cjs` | persistent-capture pipeline (Edge + CDP, JPEG, ~4.9 fps) |
 | `wallpaper-capture.cjs` | crop pipeline: full shot → three strips (top/right/bottom) |
 | `we-deploy.ps1` | deploy a page into Wallpaper Engine's project (handles the file lock) |
@@ -144,7 +144,7 @@ If `standalone/instrument.html` is ever clobbered:
 
 ```powershell
 node build.cjs                  # standalone/instrument.html → web/index.html
-node make-wallpaper.cjs         # 生成壁纸页（加 <base>、去掉 -webkit-line-clamp）
+node make-wallpaper.cjs         # 生成实验页（→ wallpaper/_experiments/）
 node make-wallpaper-full.cjs    # 原版页面 + 极简 CSS（WE 实验用，见 §9）
 ```
 
@@ -160,7 +160,7 @@ node make-wallpaper-full.cjs    # 原版页面 + 极简 CSS（WE 实验用，见
 | `index.js` | 宿主入口：注册路由、注入 origin/策略、启动固定端口 |
 | `client.js` | 客户端：侧栏图标 + 主面板 iframe |
 | `build.cjs` | 从源页面重新生成 `web/index.html` |
-| `wallpaper/` | 壁纸页 + Lively 包 |
+| `wallpaper/` | 壁纸页 + Lively 包 + `_experiments/`（死路，见该目录 README） |
 | `wallpaper-live.cjs` | 常驻截图流水线（Edge + CDP，JPEG，约 4.9 fps） |
 | `wallpaper-capture.cjs` | 裁切流水线：整页截图 → 三块（顶/右/底） |
 | `we-deploy.ps1` | 部署页面到 WE 工程（处理文件锁） |

@@ -48,5 +48,5 @@ border:1px solid #2f4a63;border-radius:6px;white-space:pre-wrap;pointer-events:n
 </script>
 `
 html = html.replace(/<head>/i, '<head>' + dbg)
-fs.writeFileSync(path.join(root, 'wallpaper', 'debug.html'), html, 'utf8')
+fs.writeFileSync(path.join(root, 'wallpaper', '_experiments', 'debug.html'), html, 'utf8')
 console.log('debug.html 生成:', html.length, '字节')

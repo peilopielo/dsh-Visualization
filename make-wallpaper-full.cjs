@@ -26,5 +26,5 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1b1e23 }
 html = html.replace(/<style>[\s\S]*?<\/style>/i, '<style>' + css + '</style>')
 html = html.replace(/<head>/i, '<head>\n<base href="http://127.0.0.1:' + PORT + '/">')
 
-fs.writeFileSync(path.join(root, 'wallpaper', 'full.html'), html, 'utf8')
+fs.writeFileSync(path.join(root, 'wallpaper', '_experiments', 'full.html'), html, 'utf8')
 console.log('full.html:', html.length, '字节')

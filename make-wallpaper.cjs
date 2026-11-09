@@ -22,5 +22,5 @@ html = html.replace(
 )
 if (html === before) console.log('WARN: line-clamp 规则没找到，可能已被改过')
 
-fs.writeFileSync(path.join(root, 'wallpaper', 'index.html'), html, 'utf8')
+fs.writeFileSync(path.join(root, 'wallpaper', '_experiments', 'index.html'), html, 'utf8')
 console.log('壁纸页（完整版）已生成: ' + html.length + ' 字节, base → :' + PORT)

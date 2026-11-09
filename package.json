@@ -1,6 +1,6 @@
 {
   "name": "dsh-visualization",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "DSH Visualization — a session instrument: rings, turns, tools and background jobs of a live DeepSeek Harness session.",
   "type": "module",
   "main": "index.js",
@@ -36,7 +36,8 @@
     "wallpaper/project.json",
     "wallpaper/preview.jpg",
     "wallpaper/lively",
-    "wallpaper/lively-package.zip"
+    "wallpaper/lively-package.zip",
+    "wallpaper/README.md"
   ],
   "keywords": [
     "dsh",
