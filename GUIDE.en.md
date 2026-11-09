@@ -79,6 +79,10 @@ themselves to fill the gap.
 `line turns` is always clamped to `show turns` — a connector can never point at a turn the panel is
 not showing.
 
+**Your choices live on the plugin side** (`~/.dsh/dsh-visualization-prefs.json`), not in a browser
+profile — so the panel, the desktop wallpaper and any browser all show the same settings, and switching
+wallpapers does not reset them.
+
 Bright vs dim segments on ②: a **dim** segment has no connector because it is outside `line turns`;
 a **bright** segment with no line is a text-only step that called no tools.
 

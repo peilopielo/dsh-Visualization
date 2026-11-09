@@ -76,6 +76,7 @@ is `'zh' | 'en'`; to add a third, turn it into a list and key the dictionaries b
 
 | Flag / tool | What it gives |
 |---|---|
+| `GET/POST /prefs` | display prefs on the host side (`~/.dsh/dsh-visualization-prefs.json`), shared by panel and wallpaper |
 | `?debug=1` (or `#debug`, `localStorage.dshviz.debug=1`) | `window.__M` / `__HIT` / `__CHAIN` |
 | `http://127.0.0.1:8799/state` | the fixed-port helper the wallpapers use |
 | `node standalone/shot.cjs <url> out.png W H` | screenshot any page (CDP over pipes) |

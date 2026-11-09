@@ -56,6 +56,7 @@ node make-wallpaper-full.cjs    # 原版页面 + 极简 CSS（WE 实验用，见
 
 | 手段 | 作用 |
 |---|---|
+| `GET/POST /prefs` | 显示选项的宿主侧存储（`~/.dsh/dsh-visualization-prefs.json`），面板与壁纸共用 |
 | `?debug=1` | 挂出 `window.__M` / `__HIT` / `__CHAIN` |
 | `http://127.0.0.1:8799/state` | 壁纸用的固定端口 |
 | `node standalone/shot.cjs <url> out.png W H` | 截图任意页面（CDP over pipes） |
