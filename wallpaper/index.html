@@ -1,62 +1,80 @@
 <!doctype html>
 <html lang="zh">
 <head>
-<meta charset="utf-8">
-<title>DSH Visualization</title>
+<meta charset="utf-8"><title>DSH Visualization</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #0b0d11; overflow: hidden; }
-  iframe { width: 100vw; height: 100vh; border: 0; display: block; }
-  #off {
-    position: fixed; inset: 0; display: none; flex-direction: column;
-    align-items: center; justify-content: center; gap: 14px;
-    color: #8d97ab; font: 15px/1.7 "Segoe UI", "Microsoft YaHei", sans-serif;
-    background: radial-gradient(circle at 50% 45%, #141a24, #0b0d11 70%);
-    text-align: center;
-  }
-  #off b { color: #e6edfa; font-size: 19px; font-weight: 600; letter-spacing: .04em; }
-  #off code { color: #ffc46b; background: #1a1f29; padding: 2px 7px; border-radius: 4px; font-size: 13px; }
+  html,body{margin:0;height:100%;background:#0b0d11;overflow:hidden}
+  canvas{display:block;width:100vw;height:100vh}
 </style>
 </head>
 <body>
-<iframe id="frame" allow="cross-origin-isolated"></iframe>
-<div id="off">
-  <b>DSH Visualization</b>
-  <div>没有连上 DeepSeek Harness。</div>
-  <div>请确认：装了 <code>dsh-visualization</code> 插件，并且 DSH 正在运行。</div>
-  <div style="opacity:.65">每 5 秒自动重试</div>
-</div>
+<canvas id="c"></canvas>
 <script>
-/* 插件的壁纸入口固定在这个区间（8799 起，被占用依次往下） */
-var PORTS = [8799, 8798, 8797, 8796, 8795];
-var frame = document.getElementById('frame');
-var off = document.getElementById('off');
-var chosen = 0;
+var cv=document.getElementById('c'),ctx=cv.getContext('2d');
+var PORTS=[8799,8798,8797,8796,8795],port=0,S=null,t0=Date.now();
 
-function probe() {
-  var i = 0;
-  function next() {
-    if (i >= PORTS.length) { frame.style.display = 'none'; off.style.display = 'flex'; chosen = 0; return; }
-    var p = PORTS[i++];
-    var ctl = new AbortController();
-    var timer = setTimeout(function () { ctl.abort() }, 1200);
-    fetch('http://127.0.0.1:' + p + '/state', { signal: ctl.signal, cache: 'no-store' })
-      .then(function (r) { return r.ok ? r.json() : null })
-      .then(function (j) {
-        clearTimeout(timer);
-        if (!j) return next();
-        chosen = p;
-        off.style.display = 'none';
-        frame.style.display = 'block';
-        if (frame.src.indexOf(':' + p + '/') < 0) frame.src = 'http://127.0.0.1:' + p + '/';
-      })
-      .catch(function () { clearTimeout(timer); next(); });
-  }
-  next();
-}
+function fit(){var d=Math.min(devicePixelRatio||1,1.5);cv.width=Math.round(innerWidth*d);cv.height=Math.round(innerHeight*d);ctx.setTransform(d,0,0,d,0,0)}
+fit();addEventListener('resize',fit);
 
+function probe(){var i=0;(function next(){
+  if(i>=PORTS.length){setTimeout(probe,5000);return}
+  var p=PORTS[i++],ctl=new AbortController(),tm=setTimeout(function(){ctl.abort()},1500);
+  fetch('http://127.0.0.1:'+p+'/state',{signal:ctl.signal,cache:'no-store'})
+    .then(function(r){return r.ok?r.json():null})
+    .then(function(j){clearTimeout(tm);if(!j)return next();port=p;S=j})
+    .catch(function(){clearTimeout(tm);next()});
+})()}
 probe();
-/* 断线后自动重连：DSH 重启会换端口，所以每次都重新探测 */
-setInterval(function () { if (!chosen) probe(); }, 5000);
+setInterval(function(){
+  if(!port){probe();return}
+  fetch('http://127.0.0.1:'+port+'/state',{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){S=j}).catch(function(){port=0});
+},3000);
+
+function arc(x,y,r,a,b,col,w){ctx.beginPath();ctx.arc(x,y,r,a,b);ctx.strokeStyle=col;ctx.lineWidth=w;ctx.stroke()}
+
+(function loop(){
+  var W=innerWidth,H=innerHeight,t=(Date.now()-t0)/1000;
+  ctx.fillStyle='#0b0d11';ctx.fillRect(0,0,W,H);
+  var cx=W*0.42,cy=H*0.5,base=Math.min(W*0.42,H*0.46);
+  var turn=(S&&S.turn)||0,steps=(S&&S.steps)||[],stats=(S&&S.toolStats)||[],jobs=(S&&S.jobs)||[],skills=(S&&S.skills)||[];
+
+  for(var i=1;i<=6;i++){arc(cx,cy,base*i/6,0,6.283,'rgba(140,160,190,0.07)',1)}
+
+  var total=0,k;for(k=0;k<stats.length;k++)total+=stats[k].count||0;
+  var a=-Math.PI/2,rT=base*0.92;
+  if(total>0)for(k=0;k<Math.min(stats.length,14);k++){var len=(stats[k].count||0)/total*6.283;arc(cx,cy,rT,a,a+len-0.01,'#ffc46b',9);a+=len}
+
+  var n=Math.min(steps.length,90),rS=base*0.72;
+  for(k=0;k<n;k++){var aa=-Math.PI/2+(k/n)*6.283;arc(cx,cy,rS,aa,aa+Math.max(0.012,6.283/n*0.62),'#f0a6c6',3)}
+
+  for(k=0;k<16;k++){var sa=-Math.PI/2+k*6.283/16,on=k<skills.length,r0=base*0.55,r1=r0+(on?14:6);
+    ctx.beginPath();ctx.moveTo(cx+Math.cos(sa)*r0,cy+Math.sin(sa)*r0);ctx.lineTo(cx+Math.cos(sa)*r1,cy+Math.sin(sa)*r1);
+    ctx.strokeStyle=on?'#b28cff':'rgba(178,140,255,0.16)';ctx.lineWidth=on?2.2:1;ctx.stroke()}
+
+  for(k=0;k<Math.min(jobs.length,24);k++){var ja=-Math.PI/2+(k/24)*6.283,jl=jobs[k].state==='RUN'?0.16:0.09;
+    arc(cx,cy,base*0.42,ja,ja+jl,jobs[k].state==='RUN'?'#8fe0c8':'rgba(143,224,200,0.45)',4)}
+
+  arc(cx,cy,base*0.30,0,6.283,'rgba(200,215,240,0.22)',1.5);
+  ctx.textAlign='center';
+  ctx.fillStyle='rgba(255,196,107,0.55)';ctx.font='600 13px "Segoe UI",sans-serif';
+  ctx.fillText('TURN',cx,cy-base*0.10);
+  ctx.fillStyle='#e6edfa';ctx.font='600 '+Math.round(base*0.28)+'px "Segoe UI",sans-serif';
+  ctx.fillText(String(turn||'—'),cx,cy+base*0.09);
+
+  if(steps.length>1){var la=-Math.PI/2+((steps.length-1)%90)/90*6.283;
+    ctx.beginPath();ctx.moveTo(cx+Math.cos(la)*base*0.30,cy+Math.sin(la)*base*0.30);
+    ctx.lineTo(cx+Math.cos(la)*rS,cy+Math.sin(la)*rS);
+    ctx.strokeStyle='rgba(240,166,198,0.65)';ctx.lineWidth=2;ctx.stroke()}
+
+  var da=-Math.PI/2+(t*0.5%6.283);
+  ctx.beginPath();ctx.arc(cx+Math.cos(da)*rT,cy+Math.sin(da)*rT,3.4,0,6.283);ctx.fillStyle='#fffaf0';ctx.fill();
+
+  ctx.textAlign='left';ctx.fillStyle='rgba(141,151,171,0.85)';ctx.font='13px "Segoe UI","Microsoft YaHei",sans-serif';
+  ctx.fillText('DSH Visualization',22,30);
+  if(S)ctx.fillText('步骤 '+steps.length+' · 任务 '+jobs.length+' · '+(port?'已连接 '+port:'未连接'),22,50);
+
+  requestAnimationFrame(loop);
+})();
 </script>
 </body>
 </html>
