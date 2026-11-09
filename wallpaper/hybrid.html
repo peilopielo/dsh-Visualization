@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>DSH Visualization</title>
+<style>
+  /* 设计分辨率 2560×1440，整块按比例缩放适配任意屏幕 */
+  html, body { margin: 0; height: 100%; background: #0b0d11; overflow: hidden }
+  #stage {
+    position: absolute; left: 0; top: 0; width: 2560px; height: 1440px;
+    transform-origin: 0 0;
+    background: radial-gradient(ellipse 64% 60% at 38% 44%, #31363e 0%, #282d34 40%, #1f2329 72%, #191c21 100%);
+  }
+  #stage > * { position: absolute; display: block }
+  /* 左区：原生 canvas（环 + 动画） */
+  #c { left: 0; top: 56px; width: 2130px; height: 1158px }
+  /* 三块截图条 */
+  #sTop { left: 0; top: 0; width: 2560px; height: 56px }
+  #sRight { left: 2130px; top: 56px; width: 430px; height: 1158px }
+  #sBottom { left: 0; top: 1214px; width: 2560px; height: 226px }
+  #hint {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    color: #8d97ab; font: 15px/1.8 "Segoe UI", "Microsoft YaHei", sans-serif;
+    text-align: center; display: none; z-index: 20
+  }
+  #hint b { display: block; color: #e6edfa; font-size: 19px; margin-bottom: 8px }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c"></canvas>
+  <img id="sTop" alt="">
+  <img id="sRight" alt="">
+  <img id="sBottom" alt="">
+  <div id="hint"><b>DSH Visualization</b><div>等待画面…</div></div>
+</div>
+<script>
+/* ---- 缩放适配 ---- */
+var stage = document.getElementById('stage');
+function fit() {
+  var s = Math.min(innerWidth / 2560, innerHeight / 1440);
+  stage.style.transform = 'scale(' + s + ')';
+  stage.style.left = ((innerWidth - 2560 * s) / 2) + 'px';
+  stage.style.top = ((innerHeight - 1440 * s) / 2) + 'px';
+}
+fit(); addEventListener('resize', fit);
+
+/* ---- 截图条：定时换查询串，坏图就藏起来 ---- */
+var strips = ['sTop', 'sRight', 'sBottom'].map(function (id) { return document.getElementById(id) });
+var hint = document.getElementById('hint');
+var loaded = 0;
+strips.forEach(function (img) {
+  img.onload = function () { loaded++; if (loaded >= 1) hint.style.display = 'none' };
+  img.onerror = function () { if (loaded === 0) hint.style.display = 'block' };
+});
+var names = ['strip-top.png', 'strip-right.png', 'strip-bottom.png'];
+var n = 0;
+function refreshStrips() {
+  var q = '?t=' + Date.now() + '-' + (n++);
+  strips.forEach(function (img, i) { img.src = names[i] + q });
+}
+refreshStrips();
+setInterval(refreshStrips, 8000);
+
+/* ---- 左区原生 canvas：环 + 光点（数据每 3 秒拉一次） ---- */
+var cv = document.getElementById('c'), ctx = cv.getContext('2d');
+var CW = 2130, CH = 1158;
+function sizeCanvas() {
+  var d = Math.min(devicePixelRatio || 1, 1.5);
+  cv.width = Math.round(CW * d); cv.height = Math.round(CH * d);
+  ctx.setTransform(d, 0, 0, d, 0, 0);
+}
+sizeCanvas();
+
+var PORTS = [8799, 8798, 8797, 8796, 8795], port = 0, S = null, t0 = Date.now();
+function probe() {
+  var i = 0;
+  (function next() {
+    if (i >= PORTS.length) { setTimeout(probe, 5000); return }
+    var p = PORTS[i++], ctl = new AbortController(), tm = setTimeout(function () { ctl.abort() }, 1500);
+    fetch('http://127.0.0.1:' + p + '/state', { signal: ctl.signal, cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null })
+      .then(function (j) { clearTimeout(tm); if (!j) return next(); port = p; S = j })
+      .catch(function () { clearTimeout(tm); next() });
+  })();
+}
+probe();
+setInterval(function () {
+  if (!port) { probe(); return }
+  fetch('http://127.0.0.1:' + port + '/state', { cache: 'no-store' })
+    .then(function (r) { return r.json() })
+    .then(function (j) { S = j })
+    .catch(function () { port = 0 });
+}, 3000);
+
+var COL = { tool: '#ffc46b', step: '#f0a6c6', skill: '#b28cff', job: '#8fe0c8' };
+function arc(x, y, r, a, b, col, w) {
+  ctx.beginPath(); ctx.arc(x, y, r, a, b); ctx.strokeStyle = col; ctx.lineWidth = w; ctx.stroke();
+}
+
+(function loop() {
+  var t = (Date.now() - t0) / 1000;
+  ctx.clearRect(0, 0, CW, CH);
+  /* 背景：与插件一致的深色渐变 */
+
+
+  var cx = CW * 0.46, cy = CH * 0.5, base = Math.min(CW, CH) * 0.33;
+  var turn = (S && S.turn) || 0;
+  var steps = (S && S.steps) || [];
+  var stats = (S && S.toolStats) || [];
+  var jobs = (S && S.jobs) || [];
+  var skills = (S && S.skills) || [];
+
+  for (var i = 1; i <= 6; i++) arc(cx, cy, base * i / 6, 0, 6.283, 'rgba(140,160,190,0.07)', 1);
+
+  var total = 0, k;
+  for (k = 0; k < stats.length; k++) total += stats[k].count || 0;
+  var a = -Math.PI / 2, rT = base * 0.95;
+  if (total > 0) {
+    for (k = 0; k < Math.min(stats.length, 14); k++) {
+      var len = (stats[k].count || 0) / total * 6.283;
+      arc(cx, cy, rT, a, a + len - 0.01, COL.tool, 10);
+      a += len;
+    }
+  }
+
+  var n2 = Math.min(steps.length, 90), rS = base * 0.74;
+  for (k = 0; k < n2; k++) {
+    var aa = -Math.PI / 2 + (k / n2) * 6.283;
+    arc(cx, cy, rS, aa, aa + Math.max(0.012, 6.283 / n2 * 0.62), COL.step, 3);
+  }
+
+  for (k = 0; k < 16; k++) {
+    var sa = -Math.PI / 2 + k * 6.283 / 16, on = k < skills.length, r0 = base * 0.56, r1 = r0 + (on ? 15 : 6);
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(sa) * r0, cy + Math.sin(sa) * r0);
+    ctx.lineTo(cx + Math.cos(sa) * r1, cy + Math.sin(sa) * r1);
+    ctx.strokeStyle = on ? COL.skill : 'rgba(178,140,255,0.16)';
+    ctx.lineWidth = on ? 2.2 : 1; ctx.stroke();
+  }
+
+  for (k = 0; k < Math.min(jobs.length, 24); k++) {
+    var ja = -Math.PI / 2 + (k / 24) * 6.283, jl = jobs[k].state === 'RUN' ? 0.16 : 0.09;
+    arc(cx, cy, base * 0.42, ja, ja + jl, jobs[k].state === 'RUN' ? COL.job : 'rgba(143,224,200,0.45)', 4);
+  }
+
+  /* 核心 */
+  var core = ctx.createRadialGradient(cx, cy, 0, cx, cy, base * 0.34);
+  core.addColorStop(0, 'rgba(255,214,150,0.20)');
+  core.addColorStop(1, 'rgba(255,214,150,0)');
+  ctx.fillStyle = core; ctx.beginPath(); ctx.arc(cx, cy, base * 0.34, 0, 6.283); ctx.fill();
+  arc(cx, cy, base * 0.30, 0, 6.283, 'rgba(200,215,240,0.22)', 1.5);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,196,107,0.55)'; ctx.font = '600 13px "Segoe UI",sans-serif';
+  ctx.fillText('TURN', cx, cy - base * 0.10);
+  ctx.fillStyle = '#e6edfa'; ctx.font = '600 ' + Math.round(base * 0.26) + 'px "Segoe UI",sans-serif';
+  ctx.fillText(String(turn || '—'), cx, cy + base * 0.09);
+
+  /* 最近一步的连线 + 沿环跑的光点 */
+  if (steps.length > 1) {
+    var la = -Math.PI / 2 + ((steps.length - 1) % 90) / 90 * 6.283;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(la) * base * 0.30, cy + Math.sin(la) * base * 0.30);
+    ctx.lineTo(cx + Math.cos(la) * rS, cy + Math.sin(la) * rS);
+    ctx.strokeStyle = 'rgba(240,166,198,0.7)'; ctx.lineWidth = 2; ctx.stroke();
+  }
+  var da = -Math.PI / 2 + (t * 0.6 % 6.283);
+  ctx.beginPath(); ctx.arc(cx + Math.cos(da) * rT, cy + Math.sin(da) * rT, 4, 0, 6.283);
+  ctx.fillStyle = '#fffaf0'; ctx.fill();
+
+
+  /* ---- 阶梯连线：最近 12 步，从核心射向 ② / ④ ---- */
+  var K = Math.min(steps.length, 12), rS2 = base * 0.74;
+  for (k = 0; k < K; k++) {
+    var idx = steps.length - K + k;
+    var ang = -Math.PI / 2 + ((idx % 90) / 90) * 6.283;
+    var fr = (k + 1) / K;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(ang) * base * 0.30, cy + Math.sin(ang) * base * 0.30);
+    ctx.lineTo(cx + Math.cos(ang) * rS2, cy + Math.sin(ang) * rS2);
+    ctx.strokeStyle = 'rgba(255,236,205,' + (0.10 + 0.42 * fr).toFixed(3) + ')';
+    ctx.lineWidth = 1 + 1.2 * fr; ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx + Math.cos(ang) * rS2, cy + Math.sin(ang) * rS2, 1.6, 0, 6.283);
+    ctx.fillStyle = 'rgba(255,246,230,' + (0.3 + 0.5 * fr).toFixed(3) + ')'; ctx.fill();
+  }
+
+  /* ---- 七层标签 + 数字（和插件里一致）---- */
+  var RH = [0.30, 0.74, 0.56, 0.95, 0.42, 0.86, 0.90];
+  var lastStep = steps.length ? steps[steps.length - 1] : null;
+  var lastSec = lastStep ? Math.max(0, ((lastStep.end || Date.now()) - lastStep.t) / 1000) : 0;
+  var runJobs = jobs.filter(function (j) { return j.state === 'RUN' }).length;
+  var pct = (S && S.ctxUsed && S.ctxWin) ? Math.round(S.ctxUsed / S.ctxWin * 100) : 0;
+  var names = ['① 会话', '② 步骤', '③ 技能', '④ 工具', '⑤ 任务', '⑥ 审批', '⑦ 变更'];
+  var cols = ['#e6edfa', '#f0a6c6', '#b28cff', '#ffc46b', '#7fd8c4', '#ff8a6b', '#8fb8ff'];
+  var cnt = [
+    pct + '%',
+    lastSec.toFixed(1) + 's',
+    skills.length + '',
+    stats.filter(function (s) { return s.count > 0 }).length + ' 种',
+    '运行 ' + runJobs + ' · 共 ' + jobs.length,
+    ((S && S.approvals) || 0) + ' 次',
+    ((S && S.changes || []).length || 0) + ' 处'
+  ];
+  ctx.textAlign = 'center';
+  for (k = 0; k < 7; k++) {
+    var rr = base * RH[k];
+    ctx.font = '10px Consolas,monospace';
+    ctx.fillStyle = cols[k]; ctx.globalAlpha = 0.55;
+    ctx.fillText(names[k], cx, cy - rr - 16);
+    ctx.globalAlpha = 0.35;
+    ctx.fillText(String(cnt[k]), cx, cy - rr - 4);
+    ctx.globalAlpha = 1;
+  }
+
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

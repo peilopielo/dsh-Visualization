@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8"><title>DSH Visualization</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0d11; overflow: hidden }
+  img { display: block; width: 100vw; height: 100vh; object-fit: contain }
+  #hint {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    color: #8d97ab; font: 15px/1.8 "Segoe UI", "Microsoft YaHei", sans-serif; text-align: center
+  }
+  #hint b { display: block; color: #e6edfa; font-size: 19px; margin-bottom: 8px }
+</style>
+</head>
+<body>
+<img id="shot" alt="">
+<div id="hint"><b>DSH Visualization</b><div>等待第一帧…</div></div>
+<script>
+var img = document.getElementById('shot');
+var hint = document.getElementById('hint');
+img.onload = function () { hint.style.display = 'none' };
+img.onerror = function () { hint.style.display = 'block' };
+var n = 0;
+function tick() {
+  /* 每次换个查询串，避免缓存 */
+  img.src = 'frame.png?t=' + Date.now() + '-' + (n++);
+}
+tick();
+setInterval(tick, 8000);
+</script>
+</body>
+</html>
