@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>DSH Visualization</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#0b0d11}
+  iframe{position:fixed;inset:0;width:100%;height:100%;border:0}
+  #hint{position:fixed;left:0;right:0;top:46%;text-align:center;color:#6b6f78;
+    font:12px/1.8 ui-monospace,Consolas,monospace;z-index:2;display:none;pointer-events:none}
+</style>
+</head>
+<body>
+<iframe id="f" allow="autoplay"></iframe>
+<div id="hint">等待 dsh-visualization 插件（127.0.0.1:8799）…</div>
+<script>
+  const f = document.getElementById('f');
+  f.src = 'http://127.0.0.1:8799/?t=' + Date.now();   /* 解析时就设，不等探测 */
+  const hint = document.getElementById('hint');
+  const PORTS = [8799, 8798, 8797, 8796, 8795];
+  let up = null;
+  let cur = 8799;
+
+  function show(msg) { hint.textContent = msg; hint.style.display = 'block' }
+  function hide() { hint.style.display = 'none' }
+
+  /* 探测：从第一个能应答的端口找起（不放 abort controller，用 signal.timeout） */
+  function findPort(i, done) {
+    if (i >= PORTS.length) return done(0)
+    const p = PORTS[i];
+    fetch('http://127.0.0.1:' + p + '/state', { cache: 'no-store', signal: AbortSignal.timeout(1500) })
+      .then(function (r) { done(r.ok ? p : 0) })
+      .catch(function () { findPort(i + 1, done) });
+  }
+
+  function tick() {
+    findPort(0, function (p) {
+      if (p) {
+        hide();
+        if (up === false || p !== cur) {
+          cur = p;
+          f.src = 'http://127.0.0.1:' + p + '/?t=' + Date.now();
+        }
+        up = true;
+        setTimeout(tick, 5000);
+      } else {
+        show('等待 dsh-visualization 插件（127.0.0.1:8799–8795）…');
+        up = false;
+        setTimeout(tick, 3000);
+      }
+    });
+  }
+  tick();
+</script>
+</body>
+</html>

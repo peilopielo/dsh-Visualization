@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>HALOFLUX · DSH LIVE</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#08090b}
+  iframe{position:fixed;inset:0;width:100%;height:100%;border:0}
+  #hint{position:fixed;left:0;right:0;top:46%;text-align:center;color:#6b6f78;
+    font:12px/1.8 ui-monospace,Consolas,monospace;z-index:2;display:none}
+</style>
+</head>
+<body>
+<iframe id="f" allow="autoplay"></iframe>
+<div id="hint">等待 dsh-hud 服务（127.0.0.1:8799）…</div>
+<script>
+var PORTS = [8799, 8798, 8797, 8796, 8795];
+var f = document.getElementById('f');
+var hint = document.getElementById('hint');
+var port = PORTS[0], up = null;
+
+/* 立刻设 src（不等任何探测结果） */
+f.src = 'http://127.0.0.1:' + PORTS[0] + '/?t=' + Date.now();
+
+function show(msg) { hint.textContent = msg; hint.style.display = 'block' }
+function hide() { hint.style.display = 'none' }
+
+function probe(p) {
+  var ctl = new AbortController();
+  var tm = setTimeout(function () { ctl.abort() }, 1500);
+  return fetch('http://127.0.0.1:' + p + '/state', { signal: ctl.signal, cache: 'no-store' })
+    .then(function (r) { clearTimeout(tm); return r.ok })
+    .catch(function () { clearTimeout(tm); return false });
+}
+
+async function tick() {
+  var found = 0;
+  for (var i = 0; i < PORTS.length; i++) {
+    if (await probe(PORTS[i])) { found = PORTS[i]; break }
+  }
+  if (found) {
+    hide();
+    if (up === false) {
+      port = found;
+      f.src = 'http://127.0.0.1:' + found + '/?t=' + Date.now();
+    }
+    up = true;
+    setTimeout(tick, 5000);
+  } else {
+    show('等待 dsh-visualization 插件（127.0.0.1:8799–8795）…');
+    up = false;
+    setTimeout(tick, 3000);
+  }
+}
+tick();
+</script>
+</body>
+</html>
