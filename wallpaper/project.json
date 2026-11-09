@@ -1,0 +1,13 @@
+{
+  "contentrating": "Everyone",
+  "description": "A live session instrument for DeepSeek Harness: seven rings, a turn timeline, per-step ladders. Needs the dsh-visualization plugin installed and DSH running — the wallpaper talks to http://127.0.0.1:8799/, which the plugin opens on a fixed port. Noncommercial; visual language derived from HALOFLUX by Ryder191.",
+  "file": "index.html",
+  "preview": "preview.jpg",
+  "tags": [
+    "Abstract",
+    "Technology"
+  ],
+  "title": "DSH Visualization",
+  "type": "web",
+  "version": 1
+}

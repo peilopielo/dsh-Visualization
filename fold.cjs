@@ -658,6 +658,40 @@ function setPolicy(policy) {
   if (policy && typeof policy.allowRemote === 'boolean') ALLOW_REMOTE = policy.allowRemote
 }
 
+
+/* ---------------- 固定端口的"壁纸入口" ----------------
+   DSH 的 Web 端口每次启动都会变，壁纸里写死端口就必然失效。
+   这里在 127.0.0.1 上开一个固定端口（默认 8799，被占用就依次退），
+   只转发到本进程的 handle()，所以壁纸永远访问同一个地址。 */
+let HELPER = null
+
+function startHelper(preferredPort) {
+  if (HELPER) return HELPER
+  const http = require('node:http')
+  const base = Number(preferredPort) || 8799
+  let attempt = 0
+  const tryListen = () => {
+    if (attempt > 4) return null
+    const port = base - attempt
+    attempt++
+    const srv = http.createServer((rq, rs) => {
+      /* 把根路径映射成插件前缀，handle() 内部按 /dsh-visualization 路由 */
+      rq.url = '/dsh-visualization' + (rq.url || '/')
+      handle(rq, rs)
+    })
+    srv.on('error', () => { try { srv.close() } catch (e) { } tryListen() })
+    srv.listen(port, '127.0.0.1', () => {
+      HELPER = { port: port, server: srv }
+      try { console.log('[dsh-visualization] wallpaper entry: http://127.0.0.1:' + port + '/') } catch (e) { }
+    })
+    return srv
+  }
+  tryListen()
+  return HELPER
+}
+
+function helperPort() { return HELPER ? HELPER.port : 0 }
+
 function handle(req, res) {
   if (!ALLOW_REMOTE && !isLoopback(req)) {
     res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8' })
@@ -677,11 +711,16 @@ function handle(req, res) {
         'cache-control': 'no-store',
         'content-encoding': 'gzip',
         vary: 'accept-encoding',
+        'access-control-allow-origin': '*',
       })
       res.end(zlib.gzipSync(body))
       return
     }
-    res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+    res.writeHead(200, {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      'access-control-allow-origin': '*',
+    })
     res.end(body)
   }
   /* 救急：把浏览器里还开着的那一页 DOM 存回磁盘（instrument.html 被误覆盖时用） */
@@ -832,4 +871,7 @@ function handle(req, res) {
   res.writeHead(404); res.end('not found')
 }
 
-module.exports = { handle, listSessions, pickSession, refresh, fold, makeFolder, setOrigin, setPolicy, hasZstd: HAS_ZSTD }
+module.exports = {
+  handle, listSessions, pickSession, refresh, fold, makeFolder,
+  setOrigin, setPolicy, startHelper, helperPort, hasZstd: HAS_ZSTD,
+}

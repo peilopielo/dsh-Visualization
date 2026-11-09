@@ -75,6 +75,34 @@ Direction matters: on ②–⑦ the newest data sits at 12 o'clock and older dat
 The UI ships in Chinese and English. It starts from `navigator.language`, remembers your choice,
 and can be forced per page with `?lang=en` / `?lang=zh`.
 
+## Using it as a desktop wallpaper
+
+The panel can also run inside **Wallpaper Engine** (Steam). The plugin opens a small fixed-port
+endpoint — `http://127.0.0.1:8799/` — because the DSH Web port changes on every launch and a
+wallpaper cannot guess it.
+
+**Requirements**: the plugin installed, and DSH running. If DSH is off the wallpaper shows a hint
+and retries every 5 seconds; when DSH comes back on a different port the wallpaper finds it again.
+
+**Install the wallpaper**
+
+1. In Wallpaper Engine: **Create Wallpaper** → pick **Web** as the type
+2. When it asks for a file, choose the `wallpaper/index.html` from this repository (or
+   `wallpaper/project.json` if your version of WE asks for a project)
+3. Save the project somewhere permanent and preview it. It connects to `127.0.0.1:8799` by itself.
+
+**Changing the port**: the plugin tries 8799, then 8798, 8797, 8796, 8795. To use a different base
+port, set `wallpaperPort` in the plugin config; set it to `0` to turn the endpoint off.
+
+**If it stays on the "not connected" screen**
+
+| Cause | Fix |
+|---|---|
+| DSH is not running | start it |
+| the plugin is disabled | enable `dsh-visualization` on the Plugins page |
+| 8799–8795 are all taken | set `wallpaperPort` to a free port and edit `PORTS` in `wallpaper/index.html` |
+| CPU spikes while gaming | in Wallpaper Engine, enable "pause when a fullscreen app runs" |
+
 ## When something looks wrong
 
 | Symptom | Cause |
@@ -146,6 +174,7 @@ list and key the dictionaries by code.
 |---|---|---|
 | `basePath` | `/dsh-visualization` | route prefix |
 | `allowRemote` | `false` | allow non-loopback peers. **This exposes session logs to anyone who can reach the port.** |
+| `wallpaperPort` | `8799` | fixed local port for the wallpaper entry; tries 8799 down to 8795. `0` disables it |
 
 ## Routes
 
@@ -225,6 +254,32 @@ DSH 装在别处时用环境变量 `DSH_HOME` 或 `DSHVIZ_SESSIONS_ROOT` 指过�
 | 某个格子暗、没有线 | 它不在「连线轮数」范围内 |
 | 格子亮、没有线 | 这一步没有工具调用（纯文字步） |
 
+## 当桌面壁纸用（Wallpaper Engine）
+
+这个面板也能放进 **Wallpaper Engine**（Steam）当桌面壁纸。插件会在本机开一个**固定端口**——
+`http://127.0.0.1:8799/`——因为 DSH 的 Web 端口每次启动都会变，壁纸没法猜。
+
+**前提**：装了插件，且 DSH 正在运行。DSH 关掉时壁纸显示提示并每 5 秒重试；DSH 换了端口重启，
+壁纸会自己重新找到。
+
+**导入步骤**
+
+1. Wallpaper Engine 里点 **创建壁纸（Create Wallpaper）** → 类型选 **网页（Web）**
+2. 选文件时指向本仓库的 `wallpaper/index.html`（如果你的版本要选工程，就选 `wallpaper/project.json`）
+3. 存到固定位置，应用即可。它会自己连上 `127.0.0.1:8799`
+
+**改端口**：插件会依次尝试 8799 → 8798 → 8797 → 8796 → 8795。想换起始端口，在插件配置里写
+`wallpaperPort`；写 `0` 就是关掉这个入口。
+
+**一直显示"没有连上"怎么办**
+
+| 原因 | 处理 |
+|---|---|
+| DSH 没开 | 启动 DSH |
+| 插件被禁用了 | 在插件页启用 `dsh-visualization` |
+| 8795–8799 都被占用 | 配置里换个端口，同时改 `wallpaper/index.html` 里的 `PORTS` 数组 |
+| 玩游戏时卡顿 | 在 Wallpaper Engine 里打开"其他应用全屏时暂停" |
+
 ## 给 agent / 开发者的编辑说明
 
 **文件**：`index.js`（宿主入口，注册路由 + 注入 origin/策略）、`fold.cjs`（会话发现、zstd 帧解析、
@@ -248,7 +303,8 @@ DSH 装在别处时用环境变量 `DSH_HOME` 或 `DSHVIZ_SESSIONS_ROOT` 指过�
 `showDetail()` 的详情分支；新语言 = `EN` 词典 + `EN_RULES` 正则 + `EN_FN` 逻辑替换，并把 `LANG`
 从 `'zh'|'en'` 改成列表；新工具配色 = `toolColor()`。
 
-**配置**：`basePath`（默认 `/dsh-visualization`）、`allowRemote`（默认 `false`，打开等于把会话日志暴露给能访问该端口的人）。
+**配置**：`basePath`（默认 `/dsh-visualization`）、`allowRemote`（默认 `false`，打开等于把会话日志暴露给能访问该端口的人）、
+`wallpaperPort`（默认 `8799`，壁纸用的固定端口，写 0 关闭）。
 
 **已知限制**：内存随会话线性增长（十万条时每帧 `result()` 约 10~20ms）；界面只有中英两门语言；
 仪表只读，从不写会话文件。

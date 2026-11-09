@@ -27,4 +27,11 @@ export function apply(ctx, config = {}) {
     path: prefix,
     handler: (req2, res) => core.handle(req2, res),
   }))
+
+  /* 固定端口的壁纸入口（默认 8799）：桌面壁纸没法知道 DSH 每次随机分配的端口。
+     config.wallpaperPort 可以改，写 0 关闭。 */
+  try {
+    const port = config && config.wallpaperPort !== undefined ? Number(config.wallpaperPort) : 8799
+    if (port > 0) ctx.effect(() => (core.startHelper(port), () => { }))
+  } catch (e) { /* 端口被占之类的情况不影响主路由 */ }
 }

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>DSH Visualization</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0d11; overflow: hidden; }
+  iframe { width: 100vw; height: 100vh; border: 0; display: block; }
+  #off {
+    position: fixed; inset: 0; display: none; flex-direction: column;
+    align-items: center; justify-content: center; gap: 14px;
+    color: #8d97ab; font: 15px/1.7 "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: radial-gradient(circle at 50% 45%, #141a24, #0b0d11 70%);
+    text-align: center;
+  }
+  #off b { color: #e6edfa; font-size: 19px; font-weight: 600; letter-spacing: .04em; }
+  #off code { color: #ffc46b; background: #1a1f29; padding: 2px 7px; border-radius: 4px; font-size: 13px; }
+</style>
+</head>
+<body>
+<iframe id="frame" allow="cross-origin-isolated"></iframe>
+<div id="off">
+  <b>DSH Visualization</b>
+  <div>没有连上 DeepSeek Harness。</div>
+  <div>请确认：装了 <code>dsh-visualization</code> 插件，并且 DSH 正在运行。</div>
+  <div style="opacity:.65">每 5 秒自动重试</div>
+</div>
+<script>
+/* 插件的壁纸入口固定在这个区间（8799 起，被占用依次往下） */
+var PORTS = [8799, 8798, 8797, 8796, 8795];
+var frame = document.getElementById('frame');
+var off = document.getElementById('off');
+var chosen = 0;
+
+function probe() {
+  var i = 0;
+  function next() {
+    if (i >= PORTS.length) { frame.style.display = 'none'; off.style.display = 'flex'; chosen = 0; return; }
+    var p = PORTS[i++];
+    var ctl = new AbortController();
+    var timer = setTimeout(function () { ctl.abort() }, 1200);
+    fetch('http://127.0.0.1:' + p + '/state', { signal: ctl.signal, cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null })
+      .then(function (j) {
+        clearTimeout(timer);
+        if (!j) return next();
+        chosen = p;
+        off.style.display = 'none';
+        frame.style.display = 'block';
+        if (frame.src.indexOf(':' + p + '/') < 0) frame.src = 'http://127.0.0.1:' + p + '/';
+      })
+      .catch(function () { clearTimeout(timer); next(); });
+  }
+  next();
+}
+
+probe();
+/* 断线后自动重连：DSH 重启会换端口，所以每次都重新探测 */
+setInterval(function () { if (!chosen) probe(); }, 5000);
+</script>
+</body>
+</html>
