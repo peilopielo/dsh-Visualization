@@ -84,6 +84,8 @@ wallpaper cannot guess it.
 **Requirements**: the plugin installed, and DSH running. If DSH is off the wallpaper shows a hint
 and retries every 5 seconds; when DSH comes back on a different port the wallpaper finds it again.
 
+![How to set it as a wallpaper](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/howto.png)
+
 **Install the wallpaper**
 
 1. In Wallpaper Engine: **Create Wallpaper** → pick **Web** as the type
@@ -261,6 +263,8 @@ DSH 装在别处时用环境变量 `DSH_HOME` 或 `DSHVIZ_SESSIONS_ROOT` 指过�
 
 **前提**：装了插件，且 DSH 正在运行。DSH 关掉时壁纸显示提示并每 5 秒重试；DSH 换了端口重启，
 壁纸会自己重新找到。
+
+![How to set it as a wallpaper](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/howto.png)
 
 **导入步骤**
 
