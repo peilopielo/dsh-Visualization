@@ -18,6 +18,21 @@ npm i dsh-visualization
 
 A ring icon appears in the left rail — click it to open the panel.
 
+## Want it as a desktop wallpaper?
+
+**You need [Lively Wallpaper](https://github.com/rocksdanister/lively)** (free, open source). It renders
+the panel natively at the display's frame rate, and the panel stays clickable on the desktop.
+
+1. Install Lively
+2. Download [`wallpaper/lively-package.zip`](wallpaper/lively-package.zip) from this repository
+3. Drag the zip into Lively
+
+> Wallpaper Engine is **not** the recommended route: its own renderer crashes on this page (reproduced
+> on its Chrome 146, independent of protocol and of the stylesheet). A screenshot-based workaround is
+> documented in [wallpaper/README.md](wallpaper/README.md), but it runs at ~5 fps.
+
+More: [GUIDE.md §8](GUIDE.md#8-as-a-desktop-wallpaper).
+
 ## Learn more
 
 | Document | For |
@@ -50,6 +65,20 @@ npm i dsh-visualization
 ```
 
 装好后左侧栏出现环图标，点开就是面板。
+
+## 想当桌面壁纸用？
+
+**需要先装 [Lively Wallpaper](https://github.com/rocksdanister/lively)**（免费开源）。它用原生内核
+满帧渲染，且面板在桌面上依然可以点击操作。
+
+1. 装 Lively
+2. 下载本仓库的 [`wallpaper/lively-package.zip`](wallpaper/lively-package.zip)
+3. 把 zip 拖进 Lively
+
+> **不推荐 Wallpaper Engine**：它的渲染器跑不动这个页面（在它的 Chrome 146 上复现，与协议和样式表
+> 都无关）。截图方案记录在 [wallpaper/README.md](wallpaper/README.md)，但只有约 5 fps。
+
+详细说明：[GUIDE.md §8](GUIDE.md#8-当桌面壁纸用)。
 
 ## 更多文档
 
