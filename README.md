@@ -105,6 +105,35 @@ port, set `wallpaperPort` in the plugin config; set it to `0` to turn the endpoi
 | 8799–8795 are all taken | set `wallpaperPort` to a free port and edit `PORTS` in `wallpaper/index.html` |
 | CPU spikes while gaming | in Wallpaper Engine, enable "pause when a fullscreen app runs" |
 
+## Using it as a desktop wallpaper
+
+Two ways, depending on what the user already has installed.
+
+### Lively Wallpaper (recommended — full frame rate)
+
+[Lively](https://github.com/rocksdanister/lively) is free, open source, and renders web pages with the
+same Chromium engine Edge uses, so the panel runs at the display's frame rate with real animation.
+
+1. Install Lively Wallpaper
+2. Download [`wallpaper/lively-package.zip`](wallpaper/lively-package.zip) from this repository
+3. Drag the zip into Lively (or **Add Wallpaper → open file** → the extracted `index.html`)
+
+The page finds the plugin on `127.0.0.1:8799` by itself; if DSH is not running it shows a hint and
+retries every 5 seconds. The wallpaper is display-only — clicking the rings belongs in the DSH panel.
+
+### Wallpaper Engine (screenshot mode)
+
+Wallpaper Engine's own renderer crashes on this page (a CEF bug, reproduced on Chrome 146 and
+independent of protocol — file:// and http:// both crash). The workaround ships here as a screenshot
+pipeline: the page is captured to `frame.jpg` and the wallpaper just displays that image.
+
+```powershell
+node wallpaper-live.cjs 200 78     # ~4.9 fps, 200 KB per frame
+```
+
+Then set `wallpaper/live.html` as a Wallpaper Engine web wallpaper. See
+`wallpaper/README.md` for the capture-pipeline variants (`8s` low-CPU vs `200ms` high-fps).
+
 ## When something looks wrong
 
 | Symptom | Cause |
@@ -283,6 +312,33 @@ DSH 装在别处时用环境变量 `DSH_HOME` 或 `DSHVIZ_SESSIONS_ROOT` 指过�
 | 插件被禁用了 | 在插件页启用 `dsh-visualization` |
 | 8795–8799 都被占用 | 配置里换个端口，同时改 `wallpaper/index.html` 里的 `PORTS` 数组 |
 | 玩游戏时卡顿 | 在 Wallpaper Engine 里打开"其他应用全屏时暂停" |
+
+## 当桌面壁纸用
+
+两条路，看用户手上已经有什么。
+
+### Lively Wallpaper（推荐，满帧）
+
+[Lively](https://github.com/rocksdanister/lively) 免费开源，用 Edge 同款 Chromium 内核渲染网页，
+所以面板能跑满显示器帧率、动画是真流畅的。
+
+1. 装 Lively Wallpaper
+2. 下载本仓库的 [`wallpaper/lively-package.zip`](wallpaper/lively-package.zip)
+3. 把 zip 拖进 Lively（或者 **添加壁纸 → 打开文件** → 选解压后的 `index.html`）
+
+页面会自己找到插件的 `127.0.0.1:8799`；DSH 没开时显示提示并每 5 秒重试。
+壁纸只负责显示——点环、看详情去 DSH 侧栏面板。
+
+### Wallpaper Engine（截图模式）
+
+WE 自己的渲染器跑不动这个页面（CEF 的 bug，Chrome 146 复现，且与协议无关——file:// 和 http:// 都崩）。
+仓库里附带截图流水线作为替代：页面被截成 `frame.jpg`，壁纸只负责显示这张图。
+
+```powershell
+node wallpaper-live.cjs 200 78     # 约 4.9 fps，每帧 200 KB
+```
+
+然后把 `wallpaper/live.html` 设成 WE 的网页壁纸。低 CPU 的 8 秒版见 `wallpaper/README.md`。
 
 ## 给 agent / 开发者的编辑说明
 

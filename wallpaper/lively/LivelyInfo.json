@@ -1,0 +1,17 @@
+{
+  "AppVersion": "2.0.0.0",
+  "Title": "DSH Visualization",
+  "Thumbnail": "preview.jpg",
+  "Preview": "preview.jpg",
+  "Desc": "A live session instrument for DeepSeek Harness: seven rings, a turn timeline, per-step ladders and job/approval/change layers, read straight from the session log. Requires the dsh-visualization plugin to be installed and DSH to be running — the wallpaper connects to the plugin's fixed local port.",
+  "Author": "peilopielo",
+  "License": "PolyForm Noncommercial 1.0.0",
+  "Contact": "https://github.com/peilopielo/dsh-Visualization",
+  "Type": 1,
+  "FileName": "index.html",
+  "IsAbsolutePath": false,
+  "Arguments": null,
+  "Id": null,
+  "Tags": ["dsh", "visualization", "dashboard"],
+  "Version": 1
+}

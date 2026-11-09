@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8"><title>DSH Visualization</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0d11; overflow: hidden }
+  img { display: block; width: 100vw; height: 100vh; object-fit: contain }
+  #hint {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    color: #8d97ab; font: 15px/1.8 "Segoe UI", "Microsoft YaHei", sans-serif; text-align: center
+  }
+  #hint b { display: block; color: #e6edfa; font-size: 19px; margin-bottom: 8px }
+</style>
+</head>
+<body>
+<img id="shot" alt="">
+<div id="hint"><b>DSH Visualization</b><div>等待画面…</div></div>
+<script>
+var img = document.getElementById('shot');
+var hint = document.getElementById('hint');
+var ok = false, n = 0;
+img.onload = function () { ok = true; hint.style.display = 'none' };
+img.onerror = function () { if (!ok) hint.style.display = 'block' };
+
+/* 5 fps：截图流水线以 200ms 一轮在后台产出 frame.jpg */
+function tick() {
+  img.src = 'frame.jpg?t=' + (n++);
+}
+tick();
+setInterval(tick, 200);
+</script>
+</body>
+</html>

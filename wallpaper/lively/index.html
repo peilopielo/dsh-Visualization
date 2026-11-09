@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>DSH Visualization</title>
+<meta name="description" content="A live session instrument for DeepSeek Harness">
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0d11; overflow: hidden }
+  iframe { width: 100vw; height: 100vh; border: 0; display: block }
+  #msg {
+    position: fixed; inset: 0; display: none; flex-direction: column;
+    align-items: center; justify-content: center; gap: 12px;
+    color: #8d97ab; font: 15px/1.8 "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: radial-gradient(circle at 50% 45%, #141a24, #0b0d11 70%);
+    text-align: center;
+  }
+  #msg b { color: #e6edfa; font-size: 19px; letter-spacing: .04em }
+  #msg code { color: #ffc46b; background: #1a1f29; padding: 2px 7px; border-radius: 4px; font-size: 13px }
+</style>
+</head>
+<body>
+<iframe id="frame" src="about:blank"></iframe>
+<div id="msg">
+  <b>DSH Visualization</b>
+  <div id="why">正在连接 DeepSeek Harness…</div>
+  <div>需要：装了 <code>dsh-visualization</code> 插件，并且 DSH 正在运行</div>
+  <div style="opacity:.6">每 5 秒自动重试</div>
+</div>
+<script>
+/* 插件在固定端口 8799 开了入口（被占用时往下退） */
+var PORTS = [8799, 8798, 8797, 8796, 8795];
+var frame = document.getElementById('frame');
+var msg = document.getElementById('msg');
+var why = document.getElementById('why');
+var ok = false, i = 0;
+
+function probe() {
+  if (ok) return;
+  if (i >= PORTS.length) {
+    i = 0;
+    msg.style.display = 'flex';
+    why.textContent = '连不上插件端口（8799–8795）';
+    setTimeout(probe, 5000);
+    return;
+  }
+  var p = PORTS[i++];
+  var ctl = new AbortController();
+  var tm = setTimeout(function () { ctl.abort() }, 1500);
+  why.textContent = '正在尝试 ' + p + ' …';
+  fetch('http://127.0.0.1:' + p + '/state', { signal: ctl.signal, cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.json() : null })
+    .then(function (j) {
+      clearTimeout(tm);
+      if (!j) return probe();
+      ok = true;
+      msg.style.display = 'none';
+      frame.src = 'http://127.0.0.1:' + p + '/';
+    })
+    .catch(function () { clearTimeout(tm); setTimeout(probe, 120); });
+}
+probe();
+setInterval(function () { if (!ok) probe() }, 8000);
+</script>
+</body>
+</html>
