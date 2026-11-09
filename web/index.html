@@ -397,6 +397,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
       }
     } catch (e) { }
   })();
+  /* 环开关按钮的重绘入口：由下面的 IIFE 赋值，宿主设置异步回来后再调一次 */
+  var syncRingChips = function () { };
   function syncAllBtns() {
     var cn = $('cnBtn'), sh = $('shBtn'), rb = $('rotBtn');
     if (cn) cn.textContent = '连线：' + CN.label[CN.mode];
@@ -1680,7 +1682,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
   }
   applyPrefs();
   /* 宿主侧的设置优先（跨面板/壁纸/浏览器共用一份）；拿不到就用本地缓存 */
-  pullPrefs(function () { applyPrefs(); syncFilters(); syncAllBtns(); });
+  pullPrefs(function () { applyPrefs(); syncFilters(); syncAllBtns(); syncRingChips(); });
   buildFilters();
   syncFilters();
   syncAllBtns();
@@ -1775,11 +1777,15 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
   (function () {
     var box = $('ringToggles');
     if (!box) return;
-    box.innerHTML = '<b class="lb" style="margin-right:7px">环</b>' + RING_NAME.map(function (nm, i) {
-      var c = RING_COL[i];
-      return '<b class="chip' + (RINGVIS[i] ? ' on' : '') + '" data-ring="' + i +
-        '" style="color:' + c + ';border-color:' + (RINGVIS[i] ? c : 'rgba(190,200,215,.22)') + '">' + nm + '</b>';
-    }).join('');
+    function paint() {
+      box.innerHTML = '<b class="lb" style="margin-right:7px">环</b>' + RING_NAME.map(function (nm, i) {
+        var c = RING_COL[i];
+        return '<b class="chip' + (RINGVIS[i] ? ' on' : '') + '" data-ring="' + i +
+          '" style="color:' + c + ';border-color:' + (RINGVIS[i] ? c : 'rgba(190,200,215,.22)') + '">' + nm + '</b>';
+      }).join('');
+    }
+    paint();
+    syncRingChips = paint;
     box.addEventListener('click', function (e) {
       var k = e.target && e.target.getAttribute && e.target.getAttribute('data-ring');
       if (k == null) return;
