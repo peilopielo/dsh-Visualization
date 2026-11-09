@@ -407,18 +407,49 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
     }
     syncTurnBtns();
   }
+  function prefsSnapshot() {
+    return {
+      rings: RINGVIS.slice(),
+      scope: SCOPE.turns,
+      lines: CN.turns,
+      mode: CN.mode,
+      share: CN.share,
+      rot: ROT.on,
+      filter: FILTER.log, fj: FILTER.jobs, ft: FILTER.tools
+    };
+  }
+  /* 推到宿主：设置跟着插件走，不跟着浏览器（面板和壁纸共用同一份） */
+  var PREF_PUSH_T = 0;
+  function pushPrefs(o) {
+    clearTimeout(PREF_PUSH_T);
+    PREF_PUSH_T = setTimeout(function () {
+      try {
+        fetch('prefs', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(o)
+        }).catch(function () { });
+      } catch (e) { }
+    }, 300);
+  }
   function savePrefs() {
+    var o = prefsSnapshot();
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify(o)) } catch (e) { }
+    pushPrefs(o);
+  }
+  /* 启动时以宿主为准（宿主的设置跨窗口、跨壁纸、跨浏览器都活着） */
+  function pullPrefs(cb) {
     try {
-      localStorage.setItem(PREFS_KEY, JSON.stringify({
-        rings: RINGVIS.slice(),
-        scope: SCOPE.turns,
-        lines: CN.turns,
-        mode: CN.mode,
-        share: CN.share,
-        rot: ROT.on,
-        filter: FILTER.log, fj: FILTER.jobs, ft: FILTER.tools
-      }));
-    } catch (e) { }
+      fetch('prefs', { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null })
+        .then(function (j) {
+          if (j && typeof j === 'object' && (j.rings || j.scope != null || j.mode)) {
+            try { localStorage.setItem(PREFS_KEY, JSON.stringify(j)) } catch (e) { }
+          }
+          if (cb) cb();
+        })
+        .catch(function () { if (cb) cb(); });
+    } catch (e) { if (cb) cb(); }
   }
   function applyPrefs() {
     var s = null;
@@ -1648,6 +1679,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
     });
   }
   applyPrefs();
+  /* 宿主侧的设置优先（跨面板/壁纸/浏览器共用一份）；拿不到就用本地缓存 */
+  pullPrefs(function () { applyPrefs(); syncFilters(); syncAllBtns(); });
   buildFilters();
   syncFilters();
   syncAllBtns();

@@ -23,6 +23,8 @@ const SESSIONS_ROOT = process.env.DSHVIZ_SESSIONS_ROOT || path.join(DSH_HOME, 's
 /* 老一些的 Node 没有 zstd API（22.15 才有）；没有就给出人话，而不是 TypeError */
 const HAS_ZSTD = typeof zlib.zstdDecompressSync === 'function'
 const PROJ_CACHE = path.join(DSH_HOME, 'storages', 'session_projcache', 'sessions')
+/* 显示选项：跟着插件走，不跟着浏览器——面板、壁纸、任意浏览器共用同一份 */
+const PREFS_FILE = path.join(DSH_HOME, 'dsh-visualization-prefs.json')
 const PAGE = path.join(__dirname, 'web', 'index.html')
 
 
@@ -733,6 +735,35 @@ function handle(req, res) {
         json({ ok: true, bytes: body.length })
       } catch (e) { res.writeHead(500); res.end(String(e.message)) }
     })
+    return
+  }
+
+  /* 显示选项的读写：GET 返回 JSON，POST 覆盖保存 */
+  if (url === '/prefs') {
+    if (req.method === 'POST') {
+      let body = ''
+      let tooBig = false
+      req.on('data', (c) => {
+        body += c
+        if (body.length > 16384) { tooBig = true; req.destroy() }
+      })
+      req.on('end', () => {
+        if (tooBig) return
+        try {
+          const o = JSON.parse(body)
+          if (!o || typeof o !== 'object') throw new Error('not an object')
+          fs.writeFileSync(PREFS_FILE, JSON.stringify(o), 'utf8')
+          json({ ok: true })
+        } catch (e) {
+          res.writeHead(400, { 'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': '*' })
+          res.end('{"ok":false}')
+        }
+      })
+      return
+    }
+    let saved = null
+    try { saved = JSON.parse(fs.readFileSync(PREFS_FILE, 'utf8')) } catch (e) { saved = null }
+    json(saved || {})
     return
   }
 
