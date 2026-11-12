@@ -1619,6 +1619,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
       var noOrigin = !url;
       if (!url) url = '（宿主还没上报 origin，刷新一次页面再试）';
       box.innerHTML =
+        '<div id="popClose" title="关闭" style="position:absolute;right:10px;top:7px;cursor:pointer;' +
+        'color:var(--dim);font-size:14px;line-height:1;padding:2px 4px">×</div>' +
         '<div style="color:var(--ink);font-size:11px;margin-bottom:6px">在独立窗口里看</div>' +
         '<div style="opacity:.7;margin-bottom:8px">桌面端不允许页面自己开窗。把下面地址粘到浏览器，' +
         '再把那个标签页拖到另一个屏幕。</div>' +
@@ -1629,6 +1631,16 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
         'border-radius:3px;color:var(--ink)">复制地址</b>' +
         '<b id="popAgain" style="cursor:pointer;margin-left:8px;color:var(--dim)">再试一次弹窗</b>';
       document.body.appendChild(box);
+      var closeBox = function () { if (box.parentNode) box.parentNode.removeChild(box) };
+      var xBtn = $('popClose');
+      if (xBtn) xBtn.addEventListener('click', closeBox);
+      /* 点面板外面、或按 Esc 也关掉 */
+      setTimeout(function () {
+        document.addEventListener('mousedown', function outside(ev) {
+          if (!box.parentNode) { document.removeEventListener('mousedown', outside); return }
+          if (!box.contains(ev.target)) { closeBox(); document.removeEventListener('mousedown', outside) }
+        });
+      }, 0);
       var copy = $('popCopy');
       if (copy) copy.addEventListener('click', function () {
         var text = url;
