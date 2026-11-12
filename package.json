@@ -1,6 +1,6 @@
 {
   "name": "dsh-visualization",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "DSH Visualization — a session instrument: rings, turns, tools and background jobs of a live DeepSeek Harness session.",
   "type": "module",
   "main": "index.js",
@@ -60,6 +60,15 @@
       "inject": [
         "@deepseek-ai/dsh-client-ui-slots"
       ]
+    },
+    "compatibility": {
+      "dsh": ">=0.2.0-rc.1 <0.3.0-0",
+      "dshReleases": {
+        "0.2.0-rc.1": "compatible",
+        "0.2.1-rc.1": "compatible",
+        "0.2.1-rc.2": "compatible",
+        "0.2.2-rc.1": "compatible"
+      }
     }
   },
   "scripts": {
@@ -72,5 +81,8 @@
   "homepage": "https://github.com/peilopielo/dsh-Visualization",
   "bugs": {
     "url": "https://github.com/peilopielo/dsh-Visualization/issues"
+  },
+  "engines": {
+    "dsh": ">=0.2.0-rc.1 <0.3.0-0"
   }
 }
