@@ -117,6 +117,23 @@ git add -A; git commit -m "..."; git push
 8. **`tool/result` id lives at `message.source.callId`**, not `data.toolCallId`.
 9. **Zoom-dependent layout** — the rings measure `.rings.getBoundingClientRect()`; if that element is
    hidden or zero-sized, `G.base` is 0 and `draw()` returns early (blank panel with no error).
+10. **Never disable `ui-settings` from inside Settings** — the settings page *is* that plugin, so turning
+    it off leaves you with a permanently blank page. Recover by editing
+    `~/.dsh/profiles/desktop/cordis.patch.yml`:
+    ```yaml
+    - id: ui-settings
+      name: "@deepseek-ai/dsh-client-ui-settings"
+      config:
+        enabled: false
+    ```
+    → change to `enabled: true` (or delete the entry). The file is reloaded live; no restart needed.
+11. **An emptied `cordis.patch.yml` (`[]`) leaves the package installed but its entry gone.** The plugin
+    manager records installed plugins as `insert` entries in that patch; wipe it and only the
+    `package.json` dependency and the `node_modules` junction survive — the loader has no entry to read.
+    Symptoms: your `entryId` is **absent from `plugin_manager list_plugins`**, the fixed port (8799) is
+    not listening, and the plugin page shows it as not installed. Recover with
+    `remove_bundle` → `install_bundle` (a local `link:` install, seconds, no network); the entry is
+    rebuilt. Rule of thumb: dependency present + junction present + entry missing = this trap.
 
 ## 9. Wallpaper routes (and why)
 

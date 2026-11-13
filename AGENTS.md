@@ -84,6 +84,17 @@ git add -A; git commit -m "..."; git push
 7. **`CN.turns = 0` 表示「全部」**：用 `turnLimit = CN.turns || 999` 兜底，否则一条线都不画。
 8. **`tool/result` 的 id 在 `message.source.callId`**，不在 `data.toolCallId`。
 9. **`.rings` 尺寸为 0 会让 `draw()` 直接 return**：面板空白但无报错，先查这个元素的包围盒。
+10. **别在设置里把 `ui-settings` 自己关掉**——关掉后设置界面永久空白，因为设置页就是这个插件渲染的。恢复：编辑 `~/.dsh/profiles/desktop/cordis.patch.yml`，把
+    ```yaml
+    - id: ui-settings
+      name: "@deepseek-ai/dsh-client-ui-settings"
+      config:
+        enabled: false
+    ```
+    改成 `enabled: true`（或整条删掉）。这个文件改动会被实时重载，不用重启。
+11. **`cordis.patch.yml` 被清空成 `[]` → 插件"包在、条目没了"**：插件管理器把"已安装插件"记在 patch 的 `insert` 条目里，清空 patch 就只剩 `package.json` 里的依赖和 `node_modules` 的 junction，加载器没有条目可读。
+    症状：`plugin_manager list_plugins` 里**搜不到自己的 entryId**、固定端口（8799）不监听、插件页显示未安装。
+    恢复：`remove_bundle` → `install_bundle`（本地 link 装一次，几秒，不走网络），条目就重建了。判断依据：`package.json` 依赖还在 + `node_modules/<name>` junction 还在 + 列表里没有条目，三件事同时成立就是这个坑。
 
 ## 9. 壁纸方案与取舍
 
