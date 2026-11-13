@@ -45,7 +45,21 @@ window.__ModuleLoader__.load({
         }, 1000)
         return () => clearInterval(id)
       }, [])
-      const src = sid ? URL + '?session=' + encodeURIComponent(sid) : URL
+      /* 把"我现在在看哪个会话"上报给宿主：固定端口（壁纸 / 独立浏览器页）据此跟随，
+       而不是自己按 mtime 挑最新的（多工作区并发时会来回跳）。 */
+    React.useEffect(() => {
+      if (!sid) return undefined
+      let stop = false
+      const report = () => {
+        if (stop) return
+        try { fetch(URL + 'focus?session=' + encodeURIComponent(sid), { method: 'POST' }).catch(() => { }) } catch (e) { }
+      }
+      report()
+      const t2 = setInterval(report, 5000)
+      return () => { stop = true; clearInterval(t2) }
+    }, [sid])
+
+    const src = sid ? URL + '?session=' + encodeURIComponent(sid) : URL
       return h('div', {
         style: {
           position: 'relative', display: 'flex', flexDirection: 'column',

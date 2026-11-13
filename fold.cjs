@@ -179,6 +179,10 @@ function findById(id) {
    规则：多个会话同时在活动时，不追最新的，咬住当前这个；
         等它安静 AUTO_IDLE_MS 之后才让位给新的活跃会话。 */
 const AUTO = { id: null, liveAt: 0, since: 0 }
+/* 面板正在显示哪个会话（由 client.js 每秒上报一次）。
+   固定端口（壁纸 / 浏览器标签）就跟着它走，不再自己挑"最新的"。 */
+const VIEWED = { id: null, at: 0 }
+const VIEWED_TTL = 6 * 3600 * 1000   /* 6 小时内有效 */
 const LIVE_MS = 12000       /* 12 秒内有写入 = 正在活动 */
 const IDLE_MS = 45000       /* 跟随目标安静 45 秒才换 */
 
@@ -193,6 +197,12 @@ function pickSession() {
     const hit = findById(CURRENT)
     if (hit) { AUTO.id = null; return hit }
   }
+  /* 0) 面板正在看某个会话 → 就跟着它（壁纸、独立浏览器页也一致） */
+  if (VIEWED.id && (Date.now() - VIEWED.at) < VIEWED_TTL) {
+    const v = findById(VIEWED.id)
+    if (v) { AUTO.id = VIEWED.id; return v }
+  }
+
   /* 插件跑在 harness 进程里，cwd 不是用户工作区 —— 跨工作区按最近写盘排序 */
   const list = listSessions(0)
   if (!list.length) return null
@@ -237,6 +247,7 @@ function followInfo() {
   const { live } = activeIds(list)
   return {
     auto: !CURRENT,
+    viewed: VIEWED.id && (Date.now() - VIEWED.at) < VIEWED_TTL ? VIEWED.id : null,
     live: live.length,
     locked: !CURRENT && live.length > 1,
     following: AUTO.id || (CURRENT || null),
@@ -893,6 +904,20 @@ function handle(req, res) {
         json({ ok: true, bytes: body.length })
       } catch (e) { res.writeHead(500); res.end(String(e.message)) }
     })
+    return
+  }
+
+  /* 面板上报"我现在在看哪个会话" —— 壁纸/独立页面据此跟随 */
+  if (url === '/focus') {
+    const raw = String(q.get('session') || '').replace(/^session-/, '')
+    /* 只收 uuid 形状（去掉 session- 前缀再校验，否则前缀里的 s/i/o/n 会被挡掉） */
+    if (raw && /^[0-9a-f][0-9a-f-]{7,}$/i.test(raw)) {
+      VIEWED.id = 'session-' + raw
+      VIEWED.at = Date.now()
+      json({ ok: true, viewed: VIEWED.id })
+    } else {
+      json({ ok: false, viewed: VIEWED.id, at: VIEWED.at })
+    }
     return
   }
 
