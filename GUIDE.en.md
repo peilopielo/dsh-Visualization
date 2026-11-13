@@ -174,6 +174,11 @@ busiest sibling — with its turn count in the middle, its id and tool count und
 running from the main ring's edge to the circle (dashes drift while the agent is running). Green means
 still running. Hover for details; click to switch into that session.
 
+**A running agent lights up**: its circle gets a soft green halo and a pulsing outer ring, and the layer
+matching what it is doing right now glows brighter — tool calls light the middle (amber) arc, step
+progress lights the inner (pink) arc, and streaming text lights the outer (teal) arc. Finished agents fade
+back to a flat outline.
+
 How many circles appear is your call: the **子圆 / circles** chip cycles 0 → 2 → 4 → 6 → 8 → 12 (0 turns
 them off). The table above always lists every subagent regardless of that setting.
 

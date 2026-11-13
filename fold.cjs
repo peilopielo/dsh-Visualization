@@ -706,9 +706,15 @@ function childStats(entry) {
     data.tokIn = (S2.tok && S2.tok.in) || 0
     data.tokOut = (S2.tok && S2.tok.out) || 0
     data.step = S2.step || 0
-    data.state = S2.state || ''
-    data.model = S2.model || (S2.session && S2.session.model) || ''
-    data.running = !!(S2.turnOpen || S2.running)
+    data.model = S2.model || ''
+    /* state 不在 result() 里，按 refresh() 同一套规则推：
+       pending 工具 → TOOL；刚出过 assistant 文本 → STREAMING；否则 THINKING；回合结束 → IDLE */
+    var pend = S2.pending ? S2.pending.size : 0
+    data.state = !S2.turnOpen ? 'IDLE'
+      : (pend ? 'TOOL'
+        : ((Date.now() - (S2.lastAssistant || 0)) < 4000 ? 'STREAMING' : 'THINKING'))
+    data.running = !!(S2.turnOpen || pend)
+    data.pending = pend
     data.preset = S2.session.preset || data.preset
   } catch (e) { /* 读不了就只报 id */ }
 
