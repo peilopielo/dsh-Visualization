@@ -827,11 +827,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
     if (sb) {
       sb.style.display = subs.length ? '' : 'none';
       if (subs.length) {
-        var sh = '<div class="rw hdrow">' + cell('分身') + cell('轮') + cell('工具') + cell('耗时') + '</div>';
+        var sh = '<div class="rw hdrow">' + cell('分身') + cell('轮') + cell('工具') + cell('最近') + '</div>';
         subs.forEach(function (s) {
           var nm = (cn(PRESET_CN, s.preset) || s.preset || 'subagent') + ' · ' + String(s.id).slice(0, 8);
           sh += '<div class="rw" data-sub="' + esc(s.id) + '" style="cursor:pointer">' +
-            cell('<span class="' + (s.running ? 'run' : 'done') + '">' + nm + '</span>') +
+            cell('<span' + (s.running ? ' class="run"' : '') + '>' + nm + '</span>') +
             cell(s.turn != null ? s.turn : '—') +
             cell(s.tools != null ? s.tools : '—') +
             cell(ago(s.last)) + '</div>';

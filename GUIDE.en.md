@@ -153,3 +153,20 @@ Full route comparison and the port fallback: [`wallpaper/README.en.md`](wallpape
 
 ---
 
+## 11. Subagents (delegated agents)
+
+When the session delegates work with `subagent` / `subagent_fork`, a **SUBAGENTS** block appears in
+the right column, under the background-jobs block:
+
+```
+SUBAGENTS / delegated agents                2 · 1 running
+agent                turns tools  last
+● cordis · 8a13a69a      1     2    9s      ← green = still running
+● cordis · 22db6314      1     0    6m
+```
+
+Each row is one delegated session. **Click a row** to switch the whole panel to that subagent's own
+session — its rings, event log and tool calls, exactly as if you had opened it directly.
+
+The panel finds them by reading `parentSession` from each sub-session's first event, so it only lists
+the agents this session actually spawned. Up to 12 are shown. No subagents → the block stays hidden.
