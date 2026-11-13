@@ -71,6 +71,14 @@ window.__ModuleLoader__.load({
 
     /* 全局跟随：DSH 页面地址里通常带着当前会话 uuid。
        不依赖仪表盘面板是否打开——在聊天页切换会话也能被跟随。 */
+    function reportViewed(id, via) {
+      try {
+        const raw = String(id || '').replace(/^session-/, '')
+        if (!/^[0-9a-f][0-9a-f-]{7,}$/i.test(raw)) return
+        fetch(URL + 'focus?session=' + encodeURIComponent(raw) + '&via=' + (via || 'x'), { method: 'POST' }).catch(() => { })
+      } catch (e) { }
+    }
+
     function watchViewedSession() {
       let last = ''
       const tick = () => {
@@ -79,15 +87,58 @@ window.__ModuleLoader__.load({
           const id = m ? m[1] : ''
           if (!id || id === last) return
           last = id
-          fetch(URL + 'focus?session=' + encodeURIComponent(id), { method: 'POST' }).catch(() => { })
+          reportViewed(id, 'url')
         } catch (e) { }
       }
       tick()
       setInterval(tick, 1500)
     }
 
+    /* 关键：侧栏点会话走的是 uiWorkspace.openSession()。
+       agent/created 只在这一会话"第一次建 Agent"时触发，所以不能只靠它——
+       这里直接拦 UI 的入口，每次点击都能拿到会话 id。 */
+    function patchSelection(ctx) {
+      const wrap = (owner, name, pick) => {
+        try {
+          if (!owner || typeof owner[name] !== 'function') return false
+          if (owner[name].__dshviz) return true
+          const orig = owner[name].bind(owner)
+          const wrapped = function () {
+            try { const id = pick.apply(null, arguments); if (id) reportViewed(id, name) } catch (e) { }
+            return orig.apply(owner, arguments)
+          }
+          wrapped.__dshviz = true
+          owner[name] = wrapped
+          return true
+        } catch (e) { return false }
+      }
+      const idOf = (target) => {
+        if (!target) return ''
+        if (typeof target === 'string') return target
+        return target.sessionId || target.id || (target.session && target.session.id) || ''
+      }
+      let ok = 0
+      try { ok += wrap(ctx.get('uiWorkspace'), 'openSession', idOf) ? 1 : 0 } catch (e) { }
+      try { ok += wrap(ctx.get('sessions'), 'retain', idOf) ? 1 : 0 } catch (e) { }
+      try { console.log('[dsh-visualization] selection hooks:', ok) } catch (e) { }
+      return ok
+    }
+
+    /* 服务可能比插件晚就绪：失败就重试十几次，别只试一次 */
+    function patchSelectionLater(ctx) {
+      let tries = 0
+      const run = () => {
+        tries++
+        let ok = 0
+        try { ok = patchSelection(ctx) || 0 } catch (e) { }
+        if (ok < 1 && tries < 20) setTimeout(run, 700)
+      }
+      run()
+    }
+
     async function apply(ctx) {
       watchViewedSession()
+      patchSelectionLater(ctx)
       try {
         const slots = await waitSlots(ctx)
         if (!slots) {
