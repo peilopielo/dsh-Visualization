@@ -168,9 +168,14 @@ agent                turns tools  last
 Each row is one delegated session. **Click a row** to switch the whole panel to that subagent's own
 session — its rings, event log and tool calls, exactly as if you had opened it directly.
 
-The same agents also appear as **mini circles to the left of the main ring** — one circle per subagent,
-the number in the middle is its turn, green means it is still running, and the small label under it is
-the first six characters of its id. Hover a circle for details; click it to switch into that session.
+The same agents also appear as **mini versions of the instrument** to the left of the main ring: each
+circle carries three arcs — outer = turns, middle = tool calls, inner = steps, each scaled against the
+busiest sibling — with its turn count in the middle, its id and tool count underneath, and a dashed line
+running from the main ring's edge to the circle (dashes drift while the agent is running). Green means
+still running. Hover for details; click to switch into that session.
+
+How many circles appear is your call: the **子圆 / circles** chip cycles 0 → 2 → 4 → 6 → 8 → 12 (0 turns
+them off). The table above always lists every subagent regardless of that setting.
 
 The panel finds them by reading `parentSession` from each sub-session's first event, so it only lists
 the agents this session actually spawned. Up to 12 in the table, 4 circles. No subagents → nothing shows.

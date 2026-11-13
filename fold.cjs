@@ -657,7 +657,7 @@ function childSessionsOf(parentId) {
     try { ids = fs.readdirSync(wsd) } catch (e) { continue }
     for (const id of ids) {
       if (id.startsWith('session-')) continue          /* 主会话 */
-      if (out.length >= 12) break
+      if (out.length >= 24) break
       const dir = path.join(wsd, id)
       let file = null
       try { file = logFileOf(dir) } catch (e) { continue }
@@ -679,7 +679,12 @@ function childStats(entry) {
   const hit = CHILD_CACHE.get(entry.id)
   if (hit && hit.key === key) return hit.data
 
-  let data = { id: entry.id, preset: entry.preset, depth: entry.depth, turn: null, tools: 0, last: 0, running: false }
+  let data = {
+    id: entry.id, preset: entry.preset, depth: entry.depth,
+    turn: null, step: 0, tools: 0, steps: 0, errs: 0,
+    ctx: 0, tokIn: 0, tokOut: 0, state: '', model: '',
+    last: 0, running: false,
+  }
   try {
     const buf = fs.readFileSync(entry.file)
     const text = unzstdAll(buf).toString('utf8')
@@ -695,7 +700,15 @@ function childStats(entry) {
     const S2 = f.result()
     data.turn = S2.turn
     data.tools = S2.toolCount || 0
-    data.running = !!S2.turnOpen
+    data.steps = (S2.sSteps || []).length
+    data.errs = S2.errs || 0
+    data.ctx = S2.ctxPct || 0
+    data.tokIn = (S2.tok && S2.tok.in) || 0
+    data.tokOut = (S2.tok && S2.tok.out) || 0
+    data.step = S2.step || 0
+    data.state = S2.state || ''
+    data.model = S2.model || (S2.session && S2.session.model) || ''
+    data.running = !!(S2.turnOpen || S2.running)
     data.preset = S2.session.preset || data.preset
   } catch (e) { /* 读不了就只报 id */ }
 
