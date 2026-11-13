@@ -307,7 +307,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
 
   /* 命中测试区域（每帧由 draw 填充）：④ 环上每个工具扇区的起止角 */
   /* 命中表：每层环画出节点时把 { kind, r, a0, a1, label, data } 登记进来，鼠标统一在这里查 */
-  var HIT = { ox: 0, oy: 0, items: [], ok: false };
+  var HIT = { ox: 0, oy: 0, items: [], dots: [], ok: false };
   function hitReg(o) { HIT.items.push(o); }
 
   /* 三环旋转：② 步骤慢、③ 技能更慢、④ 工具最快；① 会话永远不转（它是坐标系）
@@ -960,6 +960,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
   }
   function measure() {
     var z = document.querySelector('.rings').getBoundingClientRect();
+    G.box = { left: z.left, top: z.top, right: z.right, bottom: z.bottom };
     G.ox = z.left + z.width / 2;
     G.oy = z.top + z.height / 2;
     var R = Math.min(z.width * 0.40, z.height * 0.46);
@@ -1002,6 +1003,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
     var X = nx;
   X2 = nx;
     HIT.items = [];
+    HIT.dots = [];
     X.clearRect(0, 0, VW, VH);
     if (!G.base) return;
     var ox = G.ox, oy = G.oy, R = G.rad, b = pulse;
@@ -1563,6 +1565,54 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
       if (DEBUG) window.__CHAIN = CHAIN_PREV;   /* 调试用：本帧攒下的连线几何 */
     }
 
+    /* 子智能体小圆：主圆旁边，沿左下弧线排开 */
+    (function () {
+      var subs = (M.subs || []).slice(0, 6);
+      if (!subs.length || !G.base) return;
+      var r0 = G.rad ? 0 : 0;
+      var base = G.base;
+      var cx = ox, cy = oy;
+      /* 左侧竖排：主圆左边那块是空的，不会压到控件和日志 */
+      var rad = Math.max(22, Math.min(32, base * 0.072));
+      var gap = rad * 2 + 26;
+      var bx = G.box || { left: 0, top: 0, right: VW, bottom: VH };
+      var colX = bx.left + rad + 18;
+      var colTop = bx.top + 74;
+      var colBottom = bx.bottom - 130;
+      for (var si = 0; si < subs.length; si++) {
+        var s = subs[si];
+        var px = colX + (si % 2) * (gap + 6);
+        var py = colTop + Math.floor(si / 2) * gap + rad;
+        if (py > colBottom) break;
+        var col = s.running ? '#8fe0c8' : 'rgba(160,175,200,0.55)';
+        /* 底圈 */
+        X.beginPath(); X.arc(px, py, rad, 0, TAU);
+        X.strokeStyle = s.running ? 'rgba(143,224,200,0.55)' : 'rgba(150,165,190,0.32)';
+        X.lineWidth = s.running ? 2 : 1.2; X.stroke();
+        /* 进度弧：按它的工具数做一个视觉指示（无工具就只画小半圈） */
+        var prog = Math.min(1, (s.tools || 0) / 20);
+        X.beginPath(); X.arc(px, py, rad, -Math.PI / 2, -Math.PI / 2 + TAU * Math.max(0.06, prog));
+        X.strokeStyle = col; X.lineWidth = 3; X.stroke();
+        /* 中心：轮次 */
+        X.fillStyle = s.running ? '#e6edfa' : 'rgba(200,212,230,0.75)';
+        X.font = '600 ' + Math.round(rad * 0.62) + 'px "Segoe UI",sans-serif';
+        X.textAlign = 'center'; X.textBaseline = 'middle';
+        X.fillText(String(s.turn == null ? '—' : s.turn), px, py + 0.5);
+        X.textBaseline = 'alphabetic';
+        /* 名字 */
+        X.font = '9px ui-monospace,Consolas,monospace';
+        X.fillStyle = s.running ? 'rgba(143,224,200,0.85)' : 'rgba(150,165,190,0.7)';
+        X.fillText(String(s.id).slice(0, 6), px, py + rad + 12);
+        /* 命中 */
+        HIT.dots.push({
+          kind: 'sub', x: px, y: py, rad: rad + 4,
+          label: (cn(PRESET_CN, s.preset) || s.preset || 'subagent') + ' · ' + String(s.id).slice(0, 8),
+          sub: s
+        });
+      }
+      X.textAlign = 'left';
+    })();
+
     /* 层标签 */
     var lastStep = (M.sSteps && M.sSteps.length) ? M.sSteps[M.sSteps.length - 1] : null;
     var lastSec = lastStep ? Math.max(0, ((lastStep.end || tn) - lastStep.t) / 1000) : 0;
@@ -1864,6 +1914,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
   });
   /* ---------------- 任意环上的节点：悬停看名字，点击看详情 ---------------- */
   function hitAt(mx, my) {
+    /* 子智能体小圆：笛卡尔命中，优先于极坐标的环 */
+    var ds = HIT.dots || [];
+    for (var di = 0; di < ds.length; di++) {
+      var dd = ds[di];
+      var ddx = mx - dd.x, ddy = my - dd.y;
+      if (ddx * ddx + ddy * ddy <= dd.rad * dd.rad) return dd;
+    }
     if (!HIT.ox) return null;
     var dx = mx - HIT.ox, dy = my - HIT.oy;
     var r = Math.sqrt(dx * dx + dy * dy);
@@ -1882,6 +1939,15 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
   function fmtMs(v) { return v >= 1000 ? (v / 1000).toFixed(1) + 's' : Math.round(v) + 'ms'; }
   var tipEl = $('tip'), detEl = $('tdetail');
   function showTip(it, mx, my) {
+    if (it && it.kind === 'sub' && tipEl) {
+      tipEl.innerHTML = '<b>' + esc(it.label) + '</b><em>' +
+        (it.sub.running ? '在跑' : '已结束') + ' · 轮 ' + (it.sub.turn == null ? '—' : it.sub.turn) +
+        ' · 工具 ' + (it.sub.tools || 0) + '</em><span style="opacity:.6">点击切过去</span>';
+      tipEl.style.left = (mx + 14) + 'px';
+      tipEl.style.top = (my + 14) + 'px';
+      tipEl.classList.add('on');
+      return;
+    }
     if (!tipEl) return;
     tipEl.innerHTML = esc(it.label) + (it.sub ? '<em>' + esc(it.sub) + '</em>' : '');
     tipEl.style.left = (mx + 14) + 'px';
@@ -1988,6 +2054,16 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
     net.addEventListener('mouseleave', hideTip);
     net.addEventListener('click', function (e) {
       var it2 = hitAt(e.clientX, e.clientY);
+      /* 子智能体小圆：点击直接切到那个会话 */
+      if (it2 && it2.kind === 'sub' && it2.sub) {
+        var sid = it2.sub.id;
+        try {
+          fetch('select?session=' + encodeURIComponent(sid)).then(function () {
+            location.href = location.pathname + '?session=' + encodeURIComponent(sid) + (DEBUG ? '&debug=1' : '');
+          });
+        } catch (err) { }
+        return;
+      }
       if (it2) showDetail(it2, e.clientX, e.clientY);
       else if (detEl) detEl.classList.remove('on');
     });

@@ -168,5 +168,9 @@ agent                turns tools  last
 Each row is one delegated session. **Click a row** to switch the whole panel to that subagent's own
 session — its rings, event log and tool calls, exactly as if you had opened it directly.
 
+The same agents also appear as **mini circles to the left of the main ring** — one circle per subagent,
+the number in the middle is its turn, green means it is still running, and the small label under it is
+the first six characters of its id. Hover a circle for details; click it to switch into that session.
+
 The panel finds them by reading `parentSession` from each sub-session's first event, so it only lists
-the agents this session actually spawned. Up to 12 are shown. No subagents → the block stays hidden.
+the agents this session actually spawned. Up to 12 in the table, 4 circles. No subagents → nothing shows.
