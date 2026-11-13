@@ -45,21 +45,7 @@ window.__ModuleLoader__.load({
         }, 1000)
         return () => clearInterval(id)
       }, [])
-      /* 把"我现在在看哪个会话"上报给宿主：固定端口（壁纸 / 独立浏览器页）据此跟随，
-       而不是自己按 mtime 挑最新的（多工作区并发时会来回跳）。 */
-    React.useEffect(() => {
-      if (!sid) return undefined
-      let stop = false
-      const report = () => {
-        if (stop) return
-        try { fetch(URL + 'focus?session=' + encodeURIComponent(sid), { method: 'POST' }).catch(() => { }) } catch (e) { }
-      }
-      report()
-      const t2 = setInterval(report, 5000)
-      return () => { stop = true; clearInterval(t2) }
-    }, [sid])
-
-    const src = sid ? URL + '?session=' + encodeURIComponent(sid) : URL
+      const src = sid ? URL + '?session=' + encodeURIComponent(sid) : URL
       return h('div', {
         style: {
           position: 'relative', display: 'flex', flexDirection: 'column',
@@ -83,7 +69,25 @@ window.__ModuleLoader__.load({
       return null
     }
 
+    /* 全局跟随：DSH 页面地址里通常带着当前会话 uuid。
+       不依赖仪表盘面板是否打开——在聊天页切换会话也能被跟随。 */
+    function watchViewedSession() {
+      let last = ''
+      const tick = () => {
+        try {
+          const m = String(location.href).match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i)
+          const id = m ? m[1] : ''
+          if (!id || id === last) return
+          last = id
+          fetch(URL + 'focus?session=' + encodeURIComponent(id), { method: 'POST' }).catch(() => { })
+        } catch (e) { }
+      }
+      tick()
+      setInterval(tick, 1500)
+    }
+
     async function apply(ctx) {
+      watchViewedSession()
       try {
         const slots = await waitSlots(ctx)
         if (!slots) {

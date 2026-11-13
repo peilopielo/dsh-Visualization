@@ -910,8 +910,9 @@ function handle(req, res) {
   /* 面板上报"我现在在看哪个会话" —— 壁纸/独立页面据此跟随 */
   if (url === '/focus') {
     const raw = String(q.get('session') || '').replace(/^session-/, '')
-    /* 只收 uuid 形状（去掉 session- 前缀再校验，否则前缀里的 s/i/o/n 会被挡掉） */
-    if (raw && /^[0-9a-f][0-9a-f-]{7,}$/i.test(raw)) {
+    /* 只收 uuid 形状，而且必须真的存在（页面 URL 里可能带的是工作区 id） */
+    const exists = !!(raw && /^[0-9a-f][0-9a-f-]{7,}$/i.test(raw) && findById('session-' + raw))
+    if (exists) {
       VIEWED.id = 'session-' + raw
       VIEWED.at = Date.now()
       json({ ok: true, viewed: VIEWED.id })
