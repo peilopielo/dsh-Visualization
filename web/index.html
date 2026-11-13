@@ -189,7 +189,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
       <div class="cl">TURN</div>
     </div>
     <div id="link">
-      <div><b id="lkSrc">数据源：session-6a016319-917… · 3.86MB</b></div>
+      <div><b id="lkSrc">数据源：session-6a016319-917… · 3.86MB</b><b id="lkLock" style="display:none;margin-left:8px;color:#f0c478;cursor:help"></b></div>
       <div id="lkMeta">实时 · 0.0s 前更新 · 5293 条事件 · preset standard</div>
       <div style="margin-top:6px"><b>会话：</b><select id="pick" data-auto="1"><option value="">自动 · 跟最新会话</option><option value="session-6a016319-9178-4fdc-b76b-e0e622ca8b17">6a016319 · dsh-Visualization · 11/7 20:07</option><option value="session-a8e93239-904a-4f4b-b381-1602b38b014b">a8e93239 · default-workspace · 11/7 15:42</option><option value="session-12e9a6c6-f16a-4ab8-ba43-c71cbefbcc2c">12e9a6c6 · default-workspace · 11/7 14:05</option><option value="session-dbbb1e1b-44ce-4288-96de-13c465684d9c">dbbb1e1b · default-workspace · 11/7 11:13</option><option value="session-2bac112f-5180-4962-a181-c018bc51c5f5">2bac112f · default-workspace · 11/6 19:46</option><option value="session-ca6d8d75-1214-4662-9a27-d6eed9fc62ae">ca6d8d75 · default-workspace · 11/6 12:39</option><option value="session-da6bbaa3-c64f-4d5a-ab3a-5880056138f0">da6bbaa3 · menote · 11/2 22:41</option><option value="session-f4c6837c-d0ec-4eb4-844e-24bc85e885e0">f4c6837c · effects · 11/1 11:41</option><option value="session-fa0d89b8-9842-47c2-8580-288d83960b7b">fa0d89b8 · default-workspace · 10/31 12:08</option><option value="session-1ef3a3ae-5a23-447e-ad2f-c299fce44b2e">1ef3a3ae · godot-dsh-学习项目 · 10/30 12:57</option><option value="session-387a4436-e8a0-413c-8fc4-5f78605b8fa0">387a4436 · default-workspace · 10/29 20:30</option><option value="session-0427c851-3ba0-4c1a-9cdb-f956ff2cec3d">0427c851 · 东方穹城录 · 10/29 19:17</option><option value="session-e2351f7a-c50f-4b75-97c1-02c36d5c331d">e2351f7a · default-workspace · 10/29 12:39</option><option value="session-ec7cd40f-68ba-4d51-94fd-2ee444313f02">ec7cd40f · default-workspace · 10/29 12:14</option><option value="session-22e5cafc-3604-4b29-93b5-897332de73eb">22e5cafc · default-workspace · 10/28 20:36</option><option value="session-65958b80-5aa4-46f9-8016-8a0baf6ba32a">65958b80 · default-workspace · 10/28 17:09</option><option value="session-c1f5eb50-0ead-4b9f-9f39-36291864ecc8">c1f5eb50 · default-workspace · 10/28 11:49</option><option value="session-49ec6397-e4ba-41fe-99af-4121c909d1c7">49ec6397 · default-workspace · 10/28 10:36</option><option value="session-1141f1ef-f7f6-4663-b388-0294c12560a3">1141f1ef · dsh-workspace · 10/27 12:57</option><option value="session-ca9b49e1-5306-4fc2-bf87-b1c3a0b5033a">ca9b49e1 · life · 10/25 20:15</option><option value="session-a2234ef9-416f-406b-9c80-39f43a08f20c">a2234ef9 · 我的脑库 · 10/25 16:53</option></select></div>
       <div style="margin-top:7px" id="ringToggles"></div>
@@ -577,6 +577,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
       M.approvalsList = j.approvalsList || []; M.changes = j.changes || []; M.delivs = j.delivs || [];
       M.subagents = j.subagents || 0; M.approvals = j.approvals || 0; M.todos = j.todos || 0;
     M.subs = j.children || [];
+    M.follow = j.follow || null;
       M.session = j.session || {}; M.bridge = j.bridge || {}; M.origin = j.origin || M.origin || ''; M.lastUpdate = Date.now();
       M.model = j.model || '—';
       if (j.replay && j.replay.on) {
@@ -916,8 +917,18 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
     $('logHint').textContent = '共 ' + M.sLog.length + ' 条' + (FILTER.log === 'all' ? '' : ' · 显示 ' + rows.length) + ' · 按轮分组 · 新在最上';
 
     /* 数据来源 */
+    var lockEl = $('lkLock');
+    if (lockEl) {
+      var fw = M.follow;
+      if (fw && fw.locked && M.autoFollow !== false) {
+        lockEl.style.display = 'inline';
+        lockEl.textContent = '⚑ ' + fw.live + ' 个会话同时活动 · 已锁定当前（不再跳）';
+        lockEl.title = '多个工作区同时在写日志。插件咬住当前会话，等它安静 45 秒后才切换。\n要立刻换，用上面的会话下拉框手动选。';
+      } else { lockEl.style.display = 'none' }
+    }
     $('lkSrc').textContent = M.ok
-      ? '数据源：' + (M.session.id || '?').replace('session-', 'session-').slice(0, 20) + '… · ' + fmt(M.bridge.bytes) + 'B'
+      ? '数据源：' + (M.session.id || '?').replace('session-', 'session-').slice(0, 20) + '… · ' + fmt(M.bridge.bytes) + 'B' +
+        (M.follow && M.follow.locked ? '  · 多会话 · 锁定' : '')
       : '数据源：未连接';
     if (LANG !== 'zh') setTimeout(translateDom, 0);   /* 英文模式：等这一帧所有赋值完成再换标签 */
     $('lkMeta').innerHTML = M.ok

@@ -173,18 +173,75 @@ function findById(id) {
   return null
 }
 
+/* 自动跟随的"粘性"状态：
+   - AUTO.id  当前跟随的会话
+   - AUTO.liveAt 它最后一次有写入的时间
+   规则：多个会话同时在活动时，不追最新的，咬住当前这个；
+        等它安静 AUTO_IDLE_MS 之后才让位给新的活跃会话。 */
+const AUTO = { id: null, liveAt: 0, since: 0 }
+const LIVE_MS = 12000       /* 12 秒内有写入 = 正在活动 */
+const IDLE_MS = 45000       /* 跟随目标安静 45 秒才换 */
+
+function activeIds(list) {
+  const now = Date.now()
+  const live = list.filter((s) => now - s.mtime < LIVE_MS)
+  return { live, now }
+}
+
 function pickSession() {
   if (CURRENT) {
     const hit = findById(CURRENT)
-    if (hit) return hit
+    if (hit) { AUTO.id = null; return hit }
   }
-  /* 插件跑在 harness 进程里，cwd 不是用户工作区 —— 直接跨工作区取最近写盘的那个 */
-  const list = listSessions(1)
-  if (list.length) {
-    const hit = findById(list[0].id)
-    if (hit) return hit
+  /* 插件跑在 harness 进程里，cwd 不是用户工作区 —— 跨工作区按最近写盘排序 */
+  const list = listSessions(0)
+  if (!list.length) return null
+  const { live, now } = activeIds(list)
+
+  /* 1) 已有跟随目标：它还在活动，或者安静得不够久 → 咬住不放 */
+  if (AUTO.id) {
+    const cur = list.find((s) => s.id === AUTO.id)
+    if (cur) {
+      const quietFor = now - cur.mtime
+      const iAmLive = quietFor < LIVE_MS
+      if (iAmLive) AUTO.liveAt = cur.mtime
+      /* 多个会话同时活动时绝不跳；只有一个活动且我已安静太久才让位 */
+      if (iAmLive || quietFor < IDLE_MS) {
+        if (live.length > 1 && iAmLive) return findById(cur.id) || cur
+        if (iAmLive) return findById(cur.id) || cur
+        if (live.length >= 1) return findById(cur.id) || cur
+        return findById(cur.id) || cur
+      }
+    }
+    AUTO.id = null
   }
-  return null
+
+  /* 2) 没目标：挑一个。多会话并发时挑"最新开始活动的那一批里最早的那个"，
+        这样拿到手之后就不会因为另一个更活跃而立刻换人。 */
+  let pick = list[0]
+  if (live.length > 1) {
+    const byStart = live.slice().sort((a, b) => a.mtime - b.mtime)
+    pick = byStart[0]
+  }
+  const hit = findById(pick.id)
+  if (!hit) return null
+  AUTO.id = pick.id
+  AUTO.liveAt = pick.mtime
+  AUTO.since = now
+  return hit
+}
+
+/* 给状态页看：当前有几个会话在同时活动 */
+function followInfo() {
+  const list = listSessions(0)
+  const { live } = activeIds(list)
+  return {
+    auto: !CURRENT,
+    live: live.length,
+    locked: !CURRENT && live.length > 1,
+    following: AUTO.id || (CURRENT || null),
+    liveOnes: live.slice(0, 6).map((s) => ({ id: s.id, ws: s.ws, mtime: s.mtime })),
+  }
 }
 
 /* ---------------- 折叠事件 → 状态 ---------------- */
@@ -729,6 +786,7 @@ function childrenOf(parentId) {
 function stateBody(c) {
   const body = c.state || { ok: false, error: c.error }
   body.autoFollow = !CURRENT
+  try { body.follow = followInfo() } catch (e) { }
   /* 子智能体：派出去的分身（按 parentSession 关联，带缓存） */
   if (body.session && body.session.id) {
     try { body.children = childrenOf(body.session.id) } catch (e) { body.children = [] }
@@ -1003,6 +1061,6 @@ function handle(req, res) {
 }
 
 module.exports = {
-  handle, listSessions, pickSession, refresh, fold, makeFolder, childrenOf,
+  handle, listSessions, pickSession, refresh, fold, makeFolder, childrenOf, followInfo,
   setOrigin, setPolicy, startHelper, helperPort, hasZstd: HAS_ZSTD,
 }
