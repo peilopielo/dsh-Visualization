@@ -184,11 +184,53 @@ const AUTO = { id: null, liveAt: 0, since: 0 }
 const VIEWED = { id: null, at: 0 }
 const VIEWED_TTL = 6 * 3600 * 1000   /* 6 小时内有效 */
 
-/* 由宿主事件调用：用户在某会话里发了消息 = 他现在正在这个会话里工作 */
+/* 由宿主事件调用：用户在某会话里发了消息、或在左侧栏选中了它 = 他现在正在这个会话里 */
+const META_CACHE = new Map()   /* id → { key, parent } */
+/* 子会话的目录名不带 session- 前缀，findById 找不到它们；这里两种都试 */
+function locateAnySession(id) {
+  const raw = String(id || '').replace(/^session-/, '')
+  let dirs = []
+  try { dirs = fs.readdirSync(SESSIONS_ROOT) } catch (e) { return null }
+  for (const ws of dirs) {
+    for (const cand of ['session-' + raw, raw]) {
+      const file = logFileOf(path.join(SESSIONS_ROOT, ws, cand))
+      try {
+        const st = fs.statSync(file)
+        return { id: raw, ws, file, mtime: st.mtimeMs, isChild: cand === raw }
+      } catch (e) { /* 试下一个 */ }
+    }
+  }
+  return null
+}
+
+function sessionParent(id) {
+  const hit = locateAnySession(id)
+  if (!hit || !hit.file) return null
+  if (hit.isChild) return '(subagent)'   /* 目录名没有前缀 = 子会话 */
+
+  /* 主会话也可能自己声明 parentSession（比如是某个会话的子智能体） */
+  const hit2 = hit
+  let st = null
+  try { st = fs.statSync(hit2.file) } catch (e) { return null }
+  const key = st.mtimeMs + ':' + st.size
+  const cached = META_CACHE.get(id)
+  if (cached && cached.key === key) return cached.parent
+  const ev = firstSessionEvent(hit2.file)
+  const sd = ev && (ev.type === 'session' ? (ev.data || ev) : (ev.data || ev))
+  const parent = (sd && sd.parentSession) || null
+  META_CACHE.set(id, { key, parent })
+  return parent
+}
+
 function noteViewed(id) {
   const raw = String(id || '').replace(/^session-/, '')
   if (!/^[0-9a-f][0-9a-f-]{7,}$/i.test(raw)) return false
-  VIEWED.id = 'session-' + raw
+  const full = 'session-' + raw
+  /* 子智能体不是"你在看的会话"——它被派出去干活，不能抢跟随目标 */
+  let parent = null
+  try { parent = sessionParent(full) } catch (e) { parent = null }
+  if (parent) return false
+  VIEWED.id = full
   VIEWED.at = Date.now()
   return true
 }
@@ -714,8 +756,17 @@ const CHILD_CACHE = new Map()
 
 function firstSessionEvent(file) {
   try {
-    const buf = fs.readFileSync(file)
-    const frames = zstdFrames(buf)
+    /* 只需要第一帧：读前 512KB 就够（一帧装不下时会退化成整文件） */
+    let buf
+    try {
+      const fd = fs.openSync(file, 'r')
+      const head = Buffer.alloc(Math.min(524288, fs.fstatSync(fd).size))
+      fs.readSync(fd, head, 0, head.length, 0)
+      fs.closeSync(fd)
+      buf = head
+    } catch (e) { buf = fs.readFileSync(file) }
+    let frames = zstdFrames(buf)
+    if (!frames.length) { buf = fs.readFileSync(file); frames = zstdFrames(buf) }
     if (!frames.length) return null
     const text = zlib.zstdDecompressSync(buf.slice(frames[0].start, frames[0].end)).toString('utf8')
     const first = text.split('\n')[0]

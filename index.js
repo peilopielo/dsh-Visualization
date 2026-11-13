@@ -35,6 +35,15 @@ export function apply(ctx, config = {}) {
     ctx.effect(() => ctx.on('api-session/activity', (sessionId) => {
       try { core.noteViewed(sessionId) } catch (e) { }
     }))
+
+    /* 侧栏选中 / 打开一个会话时，宿主会为该会话建立 Agent —— 这是"我只是切过去看看"的信号。
+       noteViewed 内部会过滤掉子智能体，避免被派出去的分身抢走跟随目标。 */
+    ctx.effect(() => ctx.on('agent/created', (payload) => {
+      try {
+        const a = payload && payload.agent
+        if (a && a.id) core.noteViewed(a.id)
+      } catch (e) { }
+    }))
   } catch (e) { /* 事件不存在时静默跳过 */ }
 
   /* 固定端口的壁纸入口（默认 8799）：桌面壁纸没法知道 DSH 每次随机分配的端口。
