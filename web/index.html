@@ -122,6 +122,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
 .tb .hdrow{color:var(--dim);font-size:9px;letter-spacing:.16em;border-bottom:1px solid var(--line)}
 .tb .rw span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #taskTable .rw{grid-template-columns:64px 1fr 52px 40px}
+      #subTable .rw{grid-template-columns:1fr 44px 52px 44px}
 #skillTable .rw{grid-template-columns:1fr 36px 56px}
 #callTable .rw{grid-template-columns:1fr 40px 58px 44px}
 
@@ -228,6 +229,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
       <h4><span class="lb">后台任务 / 工具在后台继续跑</span><b id="sJobs">1 运行中 / 共 38</b></h4>
       <div class="flt" id="fJobs"><b data-f="jobs:all" class="on">全部</b><b data-f="jobs:run" class="">运行中</b><b data-f="jobs:done" class="">已结束</b></div>
       <div class="tb" id="taskTable" style="max-height:108px"></div>
+    </section>
+
+    <section class="blk" id="subBlock" style="display:none">
+      <h4><span class="lb">子智能体 / 派出去的分身</span><b id="sSubs">0 个</b></h4>
+      <div class="tb" id="subTable" style="max-height:120px"></div>
     </section>
 
     <section class="blk" style="flex:1.7">
@@ -355,6 +361,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
     'office-recalculate': '重算表格', 'office-render': '渲染文档'
   };
   var JOB_CN = { pwsh: '后台命令', bash: '后台命令', node: '后台进程', terminal: '终端', job: '后台任务' };
+  var PRESET_CN = { standard: '标准', cordis: 'cordis', ptc: 'PTC', minimal: '精简' };
 
   function cn(map, key) { return (map && map[key]) || '' }
   /* 一行里同时给中文和原名：中文在前，原名做暗色备注 */
@@ -561,6 +568,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
       M.ticks = j.ticks || []; M.toolStats = j.toolStats || []; M.turnsList = j.turnsList || [];
       M.approvalsList = j.approvalsList || []; M.changes = j.changes || []; M.delivs = j.delivs || [];
       M.subagents = j.subagents || 0; M.approvals = j.approvals || 0; M.todos = j.todos || 0;
+    M.subs = j.children || [];
       M.session = j.session || {}; M.bridge = j.bridge || {}; M.origin = j.origin || M.origin || ''; M.lastUpdate = Date.now();
       M.model = j.model || '—';
       if (j.replay && j.replay.on) {
@@ -652,6 +660,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
     '（无文字请求）': '(no prompt)', '待定': 'pending', '进行中': 'running',
     '用户': 'user', '名称': 'name', '详情': 'detail', '耗时': 'time', '成': 'ok', '层': 'layer',
     '工作可视化': 'dsh session instrument', '⧉ 新窗口': '⧉ window', '环': 'rings', '数据源：未连接': 'Source: offline',
+    '子智能体 / 派出去的分身': 'SUBAGENTS / delegated agents',
+    '分身': 'agent', '个': '', '在跑': 'running',
     '① 会话': '① Session', '② 步骤': '② Steps', '③ 技能': '③ Skills', '④ 工具': '④ Tools',
     '⑤ 任务': '⑤ Jobs', '⑥ 审批': '⑥ Approvals', '⑦ 变更': '⑦ Changes',
     '▶ 重播': '▶ replay', '回到实时': 'back to live', '按轮分组 · 新在最上': 'grouped by turn · newest first',
@@ -810,6 +820,28 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
     });
     if (!jobs.length) h += '<div class="rw"><span style="grid-column:1/-1;color:var(--dim)">— ' + (FILTER.jobs === 'all' ? '无后台任务' : '没有符合条件的任务') + '</span></div>';
     $('taskTable').innerHTML = h;
+
+    /* 子智能体：派出去的分身（有才显示） */
+    var subs = M.subs || [];
+    var sb = $('subBlock');
+    if (sb) {
+      sb.style.display = subs.length ? '' : 'none';
+      if (subs.length) {
+        var sh = '<div class="rw hdrow">' + cell('分身') + cell('轮') + cell('工具') + cell('耗时') + '</div>';
+        subs.forEach(function (s) {
+          var nm = (cn(PRESET_CN, s.preset) || s.preset || 'subagent') + ' · ' + String(s.id).slice(0, 8);
+          sh += '<div class="rw" data-sub="' + esc(s.id) + '" style="cursor:pointer">' +
+            cell('<span class="' + (s.running ? 'run' : 'done') + '">' + nm + '</span>') +
+            cell(s.turn != null ? s.turn : '—') +
+            cell(s.tools != null ? s.tools : '—') +
+            cell(ago(s.last)) + '</div>';
+        });
+        $('subTable').innerHTML = sh;
+        $('sSubs').textContent = subs.length + ' 个' +
+          (subs.filter(function (s) { return s.running; }).length
+            ? ' · ' + subs.filter(function (s) { return s.running; }).length + ' 在跑' : '');
+      }
+    }
     $('sJobs').textContent = M.sJobs.filter(function (j) { return j.state === 'RUN'; }).length + ' 运行中 / 共 ' + M.sJobs.length +
       (FILTER.jobs === 'all' ? '' : ' · 显示 ' + jobs.length);
 
@@ -1809,6 +1841,19 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
       savePrefs();
     });
   })();
+
+  /* 点子智能体一行 → 切到它的会话 */
+  var subTable = $('subTable');
+  if (subTable) subTable.addEventListener('click', function (e) {
+    var row = e.target && e.target.closest && e.target.closest('[data-sub]');
+    if (!row) return;
+    var id = row.getAttribute('data-sub');
+    try {
+      fetch('select?session=' + encodeURIComponent(id)).then(function () {
+        location.href = location.pathname + '?session=' + encodeURIComponent(id) + (DEBUG ? '&debug=1' : '');
+      });
+    } catch (err) { }
+  });
 
   var rotBtn = $('rotBtn');
   if (rotBtn) rotBtn.addEventListener('click', function () {

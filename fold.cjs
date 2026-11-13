@@ -630,9 +630,90 @@ let ORIGIN = ''
 function setOrigin(o) { ORIGIN = String(o || '').replace(/\/+$/, '') }
 
 /* 响应体：会话状态 + 自动跟随标记 + 重放射影 */
+/* ---------------- 子智能体（子会话） ----------------
+   子会话的目录名是不带 session- 前缀的 uuid，第一条事件里带 parentSession。
+   这里按 parentSession 找子会话，只折它自己（几百 KB 级，很轻），结果按 mtime+size 缓存。 */
+const CHILD_CACHE = new Map()
+
+function firstSessionEvent(file) {
+  try {
+    const buf = fs.readFileSync(file)
+    const frames = zstdFrames(buf)
+    if (!frames.length) return null
+    const text = zlib.zstdDecompressSync(buf.slice(frames[0].start, frames[0].end)).toString('utf8')
+    const first = text.split('\n')[0]
+    return first ? JSON.parse(first) : null
+  } catch (e) { return null }
+}
+
+function childSessionsOf(parentId) {
+  if (!parentId) return []
+  const out = []
+  let dirs = []
+  try { dirs = fs.readdirSync(SESSIONS_ROOT) } catch (e) { return out }
+  for (const ws of dirs) {
+    const wsd = path.join(SESSIONS_ROOT, ws)
+    let ids = []
+    try { ids = fs.readdirSync(wsd) } catch (e) { continue }
+    for (const id of ids) {
+      if (id.startsWith('session-')) continue          /* 主会话 */
+      if (out.length >= 12) break
+      const dir = path.join(wsd, id)
+      let file = null
+      try { file = logFileOf(dir) } catch (e) { continue }
+      if (!file) continue
+      const ev = firstSessionEvent(file)
+      if (!ev) continue
+      const sd = ev.type === 'session' ? (ev.data || ev) : (ev.data || ev)
+      if (sd.parentSession !== parentId) continue
+      out.push({ id: sd.id || id, file, depth: sd.delegationDepth || 1, preset: sd.agentPreset || '', createdAt: sd.createdAt || 0 })
+    }
+  }
+  return out
+}
+
+function childStats(entry) {
+  let st = null
+  try { st = fs.statSync(entry.file) } catch (e) { return null }
+  const key = st.mtimeMs + ':' + st.size
+  const hit = CHILD_CACHE.get(entry.id)
+  if (hit && hit.key === key) return hit.data
+
+  let data = { id: entry.id, preset: entry.preset, depth: entry.depth, turn: null, tools: 0, last: 0, running: false }
+  try {
+    const buf = fs.readFileSync(entry.file)
+    const text = unzstdAll(buf).toString('utf8')
+    const f = makeFolder()
+    for (const line of text.split('\n')) {
+      if (!line) continue
+      let ev2 = null
+      try { ev2 = JSON.parse(line) } catch (e) { continue }
+      if (!ev2 || !ev2.type) continue
+      f.push(ev2)
+      if (ev2.time && ev2.time > data.last) data.last = ev2.time
+    }
+    const S2 = f.result()
+    data.turn = S2.turn
+    data.tools = S2.toolCount || 0
+    data.running = !!S2.turnOpen
+    data.preset = S2.session.preset || data.preset
+  } catch (e) { /* 读不了就只报 id */ }
+
+  CHILD_CACHE.set(entry.id, { key, data })
+  return data
+}
+
+function childrenOf(parentId) {
+  return childSessionsOf(parentId).map(childStats).filter(Boolean)
+}
+
 function stateBody(c) {
   const body = c.state || { ok: false, error: c.error }
   body.autoFollow = !CURRENT
+  /* 子智能体：派出去的分身（按 parentSession 关联，带缓存） */
+  if (body.session && body.session.id) {
+    try { body.children = childrenOf(body.session.id) } catch (e) { body.children = [] }
+  }
   if (ORIGIN) body.origin = ORIGIN
   if (REPLAY) {
     const vt = replayVTime()
@@ -903,6 +984,6 @@ function handle(req, res) {
 }
 
 module.exports = {
-  handle, listSessions, pickSession, refresh, fold, makeFolder,
+  handle, listSessions, pickSession, refresh, fold, makeFolder, childrenOf,
   setOrigin, setPolicy, startHelper, helperPort, hasZstd: HAS_ZSTD,
 }
