@@ -44,6 +44,20 @@ node make-wallpaper-full.cjs    # 原版页面 + 极简 CSS（WE 实验用，见
 
 实测（约 8.7k 事件）：首次折叠 240~260 ms，之后每次变化 7~12 ms；空闲 SSE 零字节。
 
+**自动跟随的优先级**（`fold.cjs` 的 `pickSession`）：
+
+```
+① CURRENT（?session= 或下拉框手动选）
+② VIEWED  你选中的 / 最后发消息的会话（6 小时有效）
+③ AUTO    粘性跟随：多会话并发时咬住不放（LIVE 12s / IDLE 45s）
+④ list[0] 最新的会话
+```
+
+VIEWED 有三个写入入口：`agent/created`（建 Agent 时，每个会话只发生一次）、`api-session/activity`（你发消息）、
+客户端拦 `uiWorkspace.openSession` / `sessions.retain`（**每次点侧栏都触发，最可靠**）。
+`noteViewed()` 会过滤子智能体——目录名不带 `session-` 前缀的就是子会话。
+
+
 ## 5. 加东西的落点
 
 **新环** —— `RINGVIS`/`RING_NAME`/`RING_COL`、`draw()` 里的绘制块、`hitReg(...)` 登记、`showDetail()` 分支。

@@ -61,6 +61,21 @@ plugin toggle only remounts routes, it does not re-evaluate loaded ESM.
 
 Measured at ~8.7 k events: first fold 240–260 ms, then 7–12 ms per change. Idle SSE = zero bytes.
 
+**Auto-follow priority** (`pickSession` in `fold.cjs`):
+
+```
+1 CURRENT  explicit pin (?session= or the dropdown)
+2 VIEWED   the session you selected / last wrote in (6 h TTL)
+3 AUTO     sticky: holds its target while several sessions are live (LIVE 12 s / IDLE 45 s)
+4 list[0]  newest log
+```
+
+VIEWED is written by three things: `agent/created` (once per session), `api-session/activity` (you send a
+message), and the client wrapper around `uiWorkspace.openSession` / `sessions.retain` (**fires on every
+sidebar click — the reliable one**). `noteViewed()` rejects subagents: a directory without the `session-`
+prefix is a child session.
+
+
 ## 5. Adding things
 
 **A ring** — three places in `standalone/instrument.html`: `RINGVIS` / `RING_NAME` / `RING_COL`, the
