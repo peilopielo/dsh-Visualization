@@ -28,6 +28,15 @@ export function apply(ctx, config = {}) {
     handler: (req2, res) => core.handle(req2, res),
   }))
 
+  /* 用户在某会话里发消息（api-session/activity）→ 记住"他正在看这个会话"，
+     固定端口（壁纸 / 独立浏览器页）就跟着它，而不是按 mtime 猜最新的。
+     注意：后台工具写盘不会触发这个事件，所以多工作区并发时不会再乱跳。 */
+  try {
+    ctx.effect(() => ctx.on('api-session/activity', (sessionId) => {
+      try { core.noteViewed(sessionId) } catch (e) { }
+    }))
+  } catch (e) { /* 事件不存在时静默跳过 */ }
+
   /* 固定端口的壁纸入口（默认 8799）：桌面壁纸没法知道 DSH 每次随机分配的端口。
      config.wallpaperPort 可以改，写 0 关闭。 */
   try {

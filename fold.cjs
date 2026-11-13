@@ -183,6 +183,15 @@ const AUTO = { id: null, liveAt: 0, since: 0 }
    固定端口（壁纸 / 浏览器标签）就跟着它走，不再自己挑"最新的"。 */
 const VIEWED = { id: null, at: 0 }
 const VIEWED_TTL = 6 * 3600 * 1000   /* 6 小时内有效 */
+
+/* 由宿主事件调用：用户在某会话里发了消息 = 他现在正在这个会话里工作 */
+function noteViewed(id) {
+  const raw = String(id || '').replace(/^session-/, '')
+  if (!/^[0-9a-f][0-9a-f-]{7,}$/i.test(raw)) return false
+  VIEWED.id = 'session-' + raw
+  VIEWED.at = Date.now()
+  return true
+}
 const LIVE_MS = 12000       /* 12 秒内有写入 = 正在活动 */
 const IDLE_MS = 45000       /* 跟随目标安静 45 秒才换 */
 
@@ -1087,6 +1096,6 @@ function handle(req, res) {
 }
 
 module.exports = {
-  handle, listSessions, pickSession, refresh, fold, makeFolder, childrenOf, followInfo,
+  handle, listSessions, pickSession, refresh, fold, makeFolder, childrenOf, followInfo, noteViewed,
   setOrigin, setPolicy, startHelper, helperPort, hasZstd: HAS_ZSTD,
 }
