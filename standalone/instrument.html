@@ -1784,7 +1784,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
       X.textAlign = 'left';
     })();
 
-    /* 智能体团队：右侧巨大弧带（每个成员一条同心弧），与左侧子圆形成对照 */
+    /* 智能体团队：右侧弧带，七格对应七环；弧的范围按上下边界收窄，绝不越线 */
     (function () {
       var tm = M.team;
       if (!tm || !tm.enabled) return;
@@ -1794,57 +1794,87 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
         mem.unshift({ id: meId, name: "lead", phase: "active" });
       }
       if (!mem.length) return;
-      var tasks = tm.tasks || [];
       var base = G.base, cx = ox, cy = oy;
       if (!base) return;
+      var bx = G.box || { left: 0, top: 0, right: VW, bottom: VH };
 
-      var openOf = function (m) {
-        return tasks.filter(function (k) { return k.ownerId === m.id && k.status !== "completed" }).length;
-      };
-      var maxOpen = 1;
-      mem.forEach(function (m) { maxOpen = Math.max(maxOpen, openOf(m)) });
+      /* 每个成员七环各自的数值：0 会话 1 步骤 2 技能 3 工具 4 运行 5 审批 6 变更 */
+      function metricsOf(id) {
+        var s = null;
+        if (id === meId) {
+          s = {
+            ctx: M.ctxPct || 0, steps: (M.sSteps || []).length, step: M.step || 0,
+            skills: (M.skills || []).length, tools: M.toolCount || 0,
+            jobs: (M.sJobs || []).filter(function (j) { return j.state === "RUN" }).length,
+            appr: M.approvals || 0, chg: (M.changes || []).length
+          };
+        } else {
+          var c = (M.subs || []).filter(function (x) { return x.id === id })[0];
+          if (c) {
+            s = {
+              ctx: c.ctx || 0, steps: c.steps || 0, step: c.step || 0,
+              skills: c.skills || 0, tools: c.tools || 0,
+              jobs: c.jobs || 0, appr: c.appr || 0, chg: c.chg || 0
+            };
+          }
+        }
+        if (!s) s = { ctx: 0, steps: 0, step: 0, skills: 0, tools: 0, jobs: 0, appr: 0, chg: 0 };
+        return [
+          s.ctx, s.steps || s.step, s.skills, s.tools, s.jobs, s.appr, s.chg
+        ];
+      }
 
-      var A0 = -0.78, A1 = 0.78;                       /* 右侧扇形，约 90° */
-      var r0 = base * 1.02;                             /* 紧贴主圆外侧 */
-      var step = Math.max(22, base * 0.075);            /* 每条弧的半径间距 */
-      var w = Math.max(13, base * 0.042);               /* 弧宽 */
+      var all = mem.map(function (m) { return metricsOf(m.id) });
+      var max = [1, 1, 1, 1, 1, 1, 1];
+      all.forEach(function (a) { for (var i = 0; i < 7; i++) if (a[i] > max[i]) max[i] = a[i] });
+
+      var top = bx.top + 18, bottom = bx.bottom - 18;
+      var r0 = base * 1.02;
+      var step = Math.max(22, base * 0.075);
+      var w = Math.max(12, base * 0.038);
       var pulse = 0.6 + 0.4 * Math.sin(Date.now() / 240);
+      var SEG = 7, GAP = 0.016;
 
       X.save();
-      X.lineCap = "round";
+      X.lineCap = "butt";
       mem.forEach(function (m, i) {
         var r = r0 + i * step;
-        var open = openOf(m);
-        var active = m.phase === "active";
-        var failed = m.phase === "failed";
-        var col = failed ? "#ff8a6b" : (active ? "#8fe0c8" : "rgba(160,175,200,0.55)");
-        /* 底带 */
-        X.beginPath(); X.arc(cx, cy, r, A0, A1);
-        X.strokeStyle = "rgba(150,170,200,0.13)"; X.lineWidth = w; X.stroke();
-        /* 份额：手上未完成任务占最忙成员的比例 */
-        var frac = failed ? 0.14 : (open === 0 ? 0.10 : Math.max(0.16, Math.min(1, open / maxOpen)));
-        var span = (A1 - A0) * frac;
-        X.save();
-        if (active) { X.shadowColor = col; X.shadowBlur = 8 + 8 * pulse; }
-        X.beginPath(); X.arc(cx, cy, r, A0, A0 + span);
-        X.strokeStyle = col; X.lineWidth = w; X.stroke();
-        X.restore();
-        /* 名字：贴在弧的外侧中部 */
-        var am = (A0 + A1) / 2;
+        /* 上下可用空间 → 收窄张角，弧的两端不越过边界线 */
+        var room = Math.min(cy - top, bottom - cy) - w / 2;
+        var sinA = Math.max(0.10, Math.min(0.86, room / Math.max(1, r)));
+        var A = Math.asin(sinA);
+        var per = (2 * A - GAP * (SEG - 1)) / SEG;
+        var vals = all[i];
+        var col = m.phase === "failed" ? "#ff8a6b" : (m.phase === "active" ? "#8fe0c8" : "rgba(160,175,200,0.55)");
+        for (var s2 = 0; s2 < SEG; s2++) {
+          var a0 = -A + s2 * (per + GAP), a1 = a0 + per;
+          X.beginPath(); X.arc(cx, cy, r, a0, a1);
+          X.strokeStyle = "rgba(150,170,200,0.12)"; X.lineWidth = w; X.stroke();
+          var v = vals[s2] / (max[s2] || 1);
+          var f = v <= 0 ? 0 : Math.max(0.14, Math.min(1, v));
+          if (f > 0) {
+            X.save();
+            if (m.phase === "active" && s2 === 3) { X.shadowColor = RING_COL[s2]; X.shadowBlur = 6 + 6 * pulse; }
+            X.beginPath(); X.arc(cx, cy, r, a0, a0 + per * f);
+            X.strokeStyle = RING_COL[s2]; X.lineWidth = w; X.stroke();
+            X.restore();
+          }
+        }
+        /* 名字贴在外侧中部 */
+        var am = 0;
         X.font = "600 11px ui-monospace,Consolas,monospace";
         X.fillStyle = col;
         X.textAlign = "left";
         X.fillText(String(m.name || "").slice(0, 12), cx + Math.cos(am) * (r + w * 0.9), cy + Math.sin(am) * (r + w * 0.9) + 4);
-        /* 命中：极坐标，交给 hitAt 的环状判定 */
         HIT.items.push({
-          kind: "team", r: r, a0: A0, a1: A1,
-          label: (m.name || "member") + " · " + (m.phase || "") + " · 在办 " + open,
+          kind: "team", r: r, a0: -A, a1: A,
+          label: (m.name || "member") + " · " + (m.phase || ""),
           member: m
         });
       });
-      X.lineCap = "butt";
       X.restore();
     })();
+
 
 
     /* 层标签 */

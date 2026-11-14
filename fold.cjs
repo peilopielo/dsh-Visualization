@@ -862,6 +862,10 @@ function childStats(entry) {
     data.turn = S2.turn
     data.tools = S2.toolCount || 0
     data.steps = (S2.sSteps || []).length
+    data.skills = (S2.skills || []).length
+    data.jobs = (S2.jobs || []).filter(function (j) { return j.state === 'RUN' }).length
+    data.appr = S2.approvals || 0
+    data.chg = (S2.changes || []).length
     data.errs = S2.errs || 0
     data.ctx = S2.ctxPct || 0
     data.tokIn = (S2.tok && S2.tok.in) || 0
