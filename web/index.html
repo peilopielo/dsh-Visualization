@@ -194,7 +194,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
       <div id="lkMeta">实时 · 0.0s 前更新 · 5293 条事件 · preset standard</div>
       <div style="margin-top:6px"><b>会话：</b><select id="pick" data-auto="1"><option value="">自动 · 跟最新会话</option><option value="session-6a016319-9178-4fdc-b76b-e0e622ca8b17">6a016319 · dsh-Visualization · 11/7 20:07</option><option value="session-a8e93239-904a-4f4b-b381-1602b38b014b">a8e93239 · default-workspace · 11/7 15:42</option><option value="session-12e9a6c6-f16a-4ab8-ba43-c71cbefbcc2c">12e9a6c6 · default-workspace · 11/7 14:05</option><option value="session-dbbb1e1b-44ce-4288-96de-13c465684d9c">dbbb1e1b · default-workspace · 11/7 11:13</option><option value="session-2bac112f-5180-4962-a181-c018bc51c5f5">2bac112f · default-workspace · 11/6 19:46</option><option value="session-ca6d8d75-1214-4662-9a27-d6eed9fc62ae">ca6d8d75 · default-workspace · 11/6 12:39</option><option value="session-da6bbaa3-c64f-4d5a-ab3a-5880056138f0">da6bbaa3 · menote · 11/2 22:41</option><option value="session-f4c6837c-d0ec-4eb4-844e-24bc85e885e0">f4c6837c · effects · 11/1 11:41</option><option value="session-fa0d89b8-9842-47c2-8580-288d83960b7b">fa0d89b8 · default-workspace · 10/31 12:08</option><option value="session-1ef3a3ae-5a23-447e-ad2f-c299fce44b2e">1ef3a3ae · godot-dsh-学习项目 · 10/30 12:57</option><option value="session-387a4436-e8a0-413c-8fc4-5f78605b8fa0">387a4436 · default-workspace · 10/29 20:30</option><option value="session-0427c851-3ba0-4c1a-9cdb-f956ff2cec3d">0427c851 · 东方穹城录 · 10/29 19:17</option><option value="session-e2351f7a-c50f-4b75-97c1-02c36d5c331d">e2351f7a · default-workspace · 10/29 12:39</option><option value="session-ec7cd40f-68ba-4d51-94fd-2ee444313f02">ec7cd40f · default-workspace · 10/29 12:14</option><option value="session-22e5cafc-3604-4b29-93b5-897332de73eb">22e5cafc · default-workspace · 10/28 20:36</option><option value="session-65958b80-5aa4-46f9-8016-8a0baf6ba32a">65958b80 · default-workspace · 10/28 17:09</option><option value="session-c1f5eb50-0ead-4b9f-9f39-36291864ecc8">c1f5eb50 · default-workspace · 10/28 11:49</option><option value="session-49ec6397-e4ba-41fe-99af-4121c909d1c7">49ec6397 · default-workspace · 10/28 10:36</option><option value="session-1141f1ef-f7f6-4663-b388-0294c12560a3">1141f1ef · dsh-workspace · 10/27 12:57</option><option value="session-ca9b49e1-5306-4fc2-bf87-b1c3a0b5033a">ca9b49e1 · life · 10/25 20:15</option><option value="session-a2234ef9-416f-406b-9c80-39f43a08f20c">a2234ef9 · 我的脑库 · 10/25 16:53</option></select></div>
       <div style="margin-top:7px" id="ringToggles"></div>
-      <div style="margin-top:7px"><b id="rotBtn" style="cursor:pointer;color:var(--mid);border:1px solid rgba(190,200,215,.22);padding:1px 8px;display:inline-block">环旋转：开</b><b id="cnBtn" class="chip" style="margin-left:6px">连线：两者</b><b id="shBtn" class="chip">占比：次数</b><b id="tnBtn" class="chip">连线轮数：1</b><b id="scBtn" class="chip">显示轮数：1</b><b id="subBtn" class="chip">子圆：4</b><b id="langBtn" class="chip">中 / EN</b></div>
+      <div style="margin-top:7px"><b id="rotBtn" style="cursor:pointer;color:var(--mid);border:1px solid rgba(190,200,215,.22);padding:1px 8px;display:inline-block">环旋转：开</b><b id="cnBtn" class="chip" style="margin-left:6px">连线：两者</b><b id="shBtn" class="chip">占比：次数</b><b id="tnBtn" class="chip">连线轮数：1</b><b id="scBtn" class="chip">显示轮数：1</b><b id="subBtn" class="chip">子圆：4</b><b id="teamBtn" class="chip">团队：6</b><b id="langBtn" class="chip">中 / EN</b></div>
       <div style="margin-top:7px">
         <b id="rpPlay" class="chip">▶ 重播</b><b id="rpSpeed" class="chip">90ms/条</b><b id="rpLive" class="chip" style="display:none">回到实时</b>
         <span id="rpProg" style="color:var(--dim);font-size:9px;margin-left:4px"></span>
@@ -327,6 +327,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
   var SCOPE = { turns: 0, opts: [1, 2, 3, 5, 8, 0] };
   /* 左侧小圆（子智能体）显示几个；0 = 关 */
   var SUBC = { n: 4, opts: [0, 2, 4, 6, 8, 12] };
+  /* 右侧团队弧带显示几个成员（0 = 关） */
+  var TEAMC = { n: 6, opts: [0, 1, 2, 3, 4, 6, 8] };
   function scopeMinTurn() {
     var tl = M.turnsList || [];
     if (!SCOPE.turns || tl.length <= SCOPE.turns) return -Infinity;
@@ -415,7 +417,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
   /* 环开关按钮的重绘入口：由下面的 IIFE 赋值，宿主设置异步回来后再调一次 */
   var syncRingChips = function () { };
   function syncAllBtns() {
-    var cn = $('cnBtn'), sh = $('shBtn'), rb = $('rotBtn'), sb = $('subBtn');
+    var cn = $('cnBtn'), sh = $('shBtn'), rb = $('rotBtn'), sb = $('subBtn'), tb = $('teamBtn');
+    if (tb) {
+      tb.textContent = '团队：' + (TEAMC.n ? TEAMC.n : '关');
+      tb.style.color = TEAMC.n ? 'var(--mid)' : 'var(--dim)';
+    }
     if (sb) {
       sb.textContent = '子圆：' + (SUBC.n ? SUBC.n : '关');
       sb.style.color = SUBC.n ? 'var(--mid)' : 'var(--dim)';
@@ -437,6 +443,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
       share: CN.share,
       rot: ROT.on,
       subs: SUBC.n,
+      teamN: TEAMC.n,
       filter: FILTER.log, fj: FILTER.jobs, ft: FILTER.tools
     };
   }
@@ -486,6 +493,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
     if (s.share === 'count' || s.share === 'ms') CN.share = s.share;
     if (typeof s.rot === 'boolean') ROT.on = s.rot;
     if (typeof s.subs === 'number' && SUBC.opts.indexOf(s.subs) >= 0) SUBC.n = s.subs;
+    if (typeof s.teamN === 'number' && TEAMC.opts.indexOf(s.teamN) >= 0) TEAMC.n = s.teamN;
     if (s.filter) FILTER.log = s.filter;
     if (s.fj) FILTER.jobs = s.fj;
     if (s.ft) FILTER.tools = s.ft;
@@ -677,6 +685,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
     '用户': 'user', '名称': 'name', '详情': 'detail', '耗时': 'time', '成': 'ok', '层': 'layer',
     '工作可视化': 'dsh session instrument', '⧉ 新窗口': '⧉ window', '环': 'rings', '数据源：未连接': 'Source: offline',
     '智能体团队 / 成员与任务板': 'TEAM / members and task board',
+    '子圆：': 'circles: ', '团队：': 'team: ',
     '成员': 'member', '阶段': 'phase', '任务': 'task', '负责人': 'owner',
     '进行中': 'active', '准备中': 'provisioning', '失败': 'failed', '待办': 'pending',
     '子智能体 / 派出去的分身': 'SUBAGENTS / delegated agents',
@@ -1788,7 +1797,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
     (function () {
       var tm = M.team;
       if (!tm || !tm.enabled) return;
-      var mem = (tm.members || []).slice();
+      var mem = (tm.members || []).slice(0, TEAMC.n || 0);
       var meId = (M.session && M.session.id) || "";
       if (meId && !mem.some(function (m) { return m.id === meId })) {
         mem.unshift({ id: meId, name: "lead", phase: "active" });
@@ -1830,8 +1839,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
 
       var top = bx.top + 18, bottom = bx.bottom - 18;
       var r0 = base * 1.02;
-      var step = Math.max(22, base * 0.075);
-      var w = Math.max(12, base * 0.038);
+      var step = Math.max(16, base * 0.052);
+      var w = Math.max(7, base * 0.021);
       var pulse = 0.6 + 0.4 * Math.sin(Date.now() / 240);
       var SEG = 7, GAP = 0.016;
 
@@ -1860,6 +1869,22 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
             X.restore();
           }
         }
+        /* 最内侧那条弧上标出七格的名字（沿弧旋转） */
+        if (i === 0) {
+          for (var s3 = 0; s3 < SEG; s3++) {
+            var am2 = -A + s3 * (per + GAP) + per / 2;
+            X.save();
+            X.translate(cx + Math.cos(am2) * (r - w - 10), cy + Math.sin(am2) * (r - w - 10));
+            X.rotate(am2 + Math.PI / 2);
+            X.font = '9px ui-monospace,Consolas,monospace';
+            X.fillStyle = RING_COL[s3];
+            X.textAlign = 'center';
+            X.globalAlpha = 0.85;
+            X.fillText(String(RING_NAME[s3] || '').replace(/^[①-⑦]s*/, ''), 0, 0);
+            X.restore();
+          }
+        }
+
         /* 名字贴在外侧中部 */
         var am = 0;
         X.font = "600 11px ui-monospace,Consolas,monospace";
@@ -2167,6 +2192,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
         location.href = location.pathname + '?session=' + encodeURIComponent(id) + (DEBUG ? '&debug=1' : '');
       });
     } catch (err) { }
+  });
+
+  var teamBtn = $('teamBtn');
+  if (teamBtn) teamBtn.addEventListener('click', function () {
+    var i = TEAMC.opts.indexOf(TEAMC.n);
+    TEAMC.n = TEAMC.opts[(i + 1) % TEAMC.opts.length];
+    syncAllBtns();
+    savePrefs();
   });
 
   var subBtn = $('subBtn');
