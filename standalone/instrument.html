@@ -1856,6 +1856,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
         var A = Math.asin(sinA);
         var per = (2 * A - GAP * (SEG - 1)) / SEG;
         var vals = all[i];
+        /* 活动格：调工具→工具格(3)；出字/思考→步骤格(1)；空闲→不亮 */
+        var st = '';
+        if (m.id === meId) st = M.state || '';
+        else {
+          var cc = (M.subs || []).filter(function (x) { return x.id === m.id })[0];
+          if (cc) st = cc.state || '';
+        }
+        var actSeg = st === 'TOOL' ? 3 : ((st === 'STREAMING' || st === 'THINKING') ? 1 : -1);
         var col = m.phase === "failed" ? "#ff8a6b" : (m.phase === "active" ? "#8fe0c8" : "rgba(160,175,200,0.55)");
         for (var s2 = 0; s2 < SEG; s2++) {
           var a0 = -A + s2 * (per + GAP), a1 = a0 + per;
@@ -1865,7 +1873,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
           var f = v <= 0 ? 0 : Math.max(0.14, Math.min(1, v));
           if (f > 0) {
             X.save();
-            if (m.phase === "active" && s2 === 3) { X.shadowColor = RING_COL[s2]; X.shadowBlur = 6 + 6 * pulse; }
+            if (s2 === actSeg) { X.shadowColor = RING_COL[s2]; X.shadowBlur = 8 + 8 * pulse; }
             X.beginPath(); X.arc(cx, cy, r, a0, a0 + per * f);
             X.strokeStyle = RING_COL[s2]; X.lineWidth = w; X.stroke();
             X.restore();
