@@ -360,6 +360,8 @@ function makeFolder() {
     jobs: [], steps: [], turns: [], pendingPrompt: '', skills: [], ticks: [], toolAgg: {},
     approvalsList: [], changes: [], delivs: [],
     subagents: 0, approvals: 0, todos: 0, files: 0,
+    /* 智能体团队：team/mode、team/member、team/task 事件累积 */
+    team: { enabled: false, teamId: null, members: [], tasks: [], msgs: 0 },
     log: [], lastEvent: 0, lastAssistant: 0, prevAssistant: 0, lastOut: 0,
     text: '', errs: 0
   }
@@ -514,6 +516,37 @@ function makeFolder() {
         addLog('task', d.kind || 'job', 'settled · ' + (d.status || ''))
         break
       }
+      case 'team/mode':
+        S.team.enabled = !!d.enabled
+        break
+      case 'team/member': {
+        const m = d.member || {}
+        if (d.teamId) S.team.teamId = d.teamId
+        const i2 = S.team.members.findIndex(function (x) { return x.id === m.id })
+        const rec = { id: m.id || '', name: clip(m.name || 'member', 40), phase: m.phase || '', provider: m.provider || '', own: 0 }
+        if (i2 >= 0) S.team.members[i2] = rec
+        else S.team.members.push(rec)
+        addLog('state', 'team', rec.name + ' · ' + rec.phase)
+        break
+      }
+      case 'team/task': {
+        const k = d.task || {}
+        if (d.teamId) S.team.teamId = d.teamId
+        const i3 = S.team.tasks.findIndex(function (x) { return x.id === k.id })
+        const rec2 = {
+          id: k.id || '', rev: k.revision || 0, subject: clip(k.subject || '', 70),
+          status: k.status || 'pending', ownerId: k.ownerId || '',
+          blocked: (k.blockedBy || []).length,
+        }
+        if (i3 >= 0) S.team.tasks[i3] = rec2
+        else S.team.tasks.push(rec2)
+        addLog('state', 'team task', rec2.subject)
+        break
+      }
+      case 'team/message/queued':
+      case 'team/message/delivered':
+        S.team.msgs++
+        break
       case 'approval/asked':
         S.approvals++
         S.approvalsList.push({ t: e.time, id: d.id, tool: d.toolName || '', outcome: '' })
