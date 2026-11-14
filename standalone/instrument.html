@@ -2211,6 +2211,33 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
   function fmtMs(v) { return v >= 1000 ? (v / 1000).toFixed(1) + 's' : Math.round(v) + 'ms'; }
   var tipEl = $('tip'), detEl = $('tdetail');
   function showTip(it, mx, my) {
+    /* 团队成员：七格各是多少，直接列出来 */
+    if (it && it.kind === 'team' && tipEl) {
+      var m = it.member || {};
+      var id = m.id;
+      var meId = (M.session && M.session.id) || '';
+      var mm = null;
+      if (id === meId) {
+        mm = { ctx: M.ctxPct || 0, steps: (M.sSteps || []).length, step: M.step || 0,
+          skills: (M.skills || []).length, tools: M.toolCount || 0,
+          jobs: (M.sJobs || []).filter(function (j) { return j.state === 'RUN' }).length,
+          appr: M.approvals || 0, chg: (M.changes || []).length };
+      } else {
+        var c = (M.subs || []).filter(function (x) { return x.id === id })[0];
+        if (c) mm = { ctx: c.ctx || 0, steps: c.steps || 0, step: c.step || 0, skills: c.skills || 0,
+          tools: c.tools || 0, jobs: c.jobs || 0, appr: c.appr || 0, chg: c.chg || 0 };
+      }
+      var line = mm
+        ? '<em>会话 ' + Math.round(mm.ctx * 100) + '% · 步骤 ' + (mm.steps || mm.step) +
+          ' · 技能 ' + mm.skills + ' · 工具 ' + mm.tools +
+          ' · 运行 ' + mm.jobs + ' · 审批 ' + mm.appr + ' · 变更 ' + mm.chg + '</em>'
+        : '<em>这个成员的会话还没被扫描到</em>';
+      tipEl.innerHTML = '<b>' + esc(m.name || 'member') + ' · ' + esc(m.phase || '') + '</b>' + line;
+      tipEl.style.left = (mx + 14) + 'px';
+      tipEl.style.top = (my + 14) + 'px';
+      tipEl.classList.add('on');
+      return;
+    }
     if (it && it.kind === 'sub' && tipEl) {
       tipEl.innerHTML = '<b>' + esc(it.label) + '</b><em>' +
         (it.sub.running ? '在跑' : '已结束') + ' · 轮 ' + (it.sub.turn == null ? '—' : it.sub.turn) +
@@ -2221,7 +2248,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
       return;
     }
     if (!tipEl) return;
-    tipEl.innerHTML = esc(it.label) + (it.sub ? '<em>' + esc(it.sub) + '</em>' : '');
+    var txt = (it && it.label) || '';
+    if (!txt) { tipEl.classList.remove('on'); return }
+    tipEl.innerHTML = esc(txt);
     tipEl.style.left = (mx + 14) + 'px';
     tipEl.style.top = (my + 14) + 'px';
     tipEl.classList.add('on');
@@ -2327,6 +2356,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
     net.addEventListener('click', function (e) {
       var it2 = hitAt(e.clientX, e.clientY);
       /* 子智能体小圆：点击直接切到那个会话 */
+      /* 团队弧没有详情卡（信息都在悬停提示里），点它不做任何事，避免弹空卡片 */
+      if (it2 && it2.kind === 'team') return;
       if (it2 && it2.kind === 'sub' && it2.sub) {
         var sid = it2.sub.id;
         try {
