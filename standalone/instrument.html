@@ -472,7 +472,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
       fetch('prefs', { cache: 'no-store' })
         .then(function (r) { return r.ok ? r.json() : null })
         .then(function (j) {
-          if (j && typeof j === 'object' && (j.rings || j.scope != null || j.mode)) {
+          if (j && typeof j === 'object' && Object.keys(j).length) {
             try { localStorage.setItem(PREFS_KEY, JSON.stringify(j)) } catch (e) { }
           }
           if (cb) cb();
@@ -1797,11 +1797,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
     (function () {
       var tm = M.team;
       if (!tm || !tm.enabled) return;
-      var mem = (tm.members || []).slice(0, TEAMC.n || 0);
+      if (!TEAMC.n) return;                 /* 关掉就一条都不画 */
+      var mem = (tm.members || []).slice();
       var meId = (M.session && M.session.id) || "";
       if (meId && !mem.some(function (m) { return m.id === meId })) {
         mem.unshift({ id: meId, name: "lead", phase: "active" });
       }
+      mem = mem.slice(0, TEAMC.n);          /* 补完 lead 再截断，保证总数不超设定 */
       if (!mem.length) return;
       var base = G.base, cx = ox, cy = oy;
       if (!base) return;
