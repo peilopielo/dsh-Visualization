@@ -1784,7 +1784,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
       X.textAlign = 'left';
     })();
 
-    /* 智能体团队：成员画在主圆右侧（与左边子圆对称），队长也留一个位置 */
+    /* 智能体团队：右侧巨大弧带（每个成员一条同心弧），与左侧子圆形成对照 */
     (function () {
       var tm = M.team;
       if (!tm || !tm.enabled) return;
@@ -1794,65 +1794,58 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
         mem.unshift({ id: meId, name: "lead", phase: "active" });
       }
       if (!mem.length) return;
-      var base = G.base, cx = ox, cy = oy;
-      var bx = G.box || { left: 0, top: 0, right: VW, bottom: VH };
-      var rad = Math.max(20, Math.min(30, base * 0.062));
-      var gap = rad * 2 + 34;
-      var colX = bx.right - rad - 18;
-      var colTop = bx.top + 92;
-      var colBottom = bx.bottom - 120;
       var tasks = tm.tasks || [];
+      var base = G.base, cx = ox, cy = oy;
+      if (!base) return;
 
-      var dots = [];
-      mem.forEach(function (m, i) {
-        var py = colTop + i * gap;
-        if (py > colBottom) return;
-        dots.push({ m: m, x: colX, y: py });
-      });
+      var openOf = function (m) {
+        return tasks.filter(function (k) { return k.ownerId === m.id && k.status !== "completed" }).length;
+      };
+      var maxOpen = 1;
+      mem.forEach(function (m) { maxOpen = Math.max(maxOpen, openOf(m)) });
 
-      /* 连线：主圆外缘 → 成员 */
+      var A0 = -0.78, A1 = 0.78;                       /* 右侧扇形，约 90° */
+      var r0 = base * 1.02;                             /* 紧贴主圆外侧 */
+      var step = Math.max(22, base * 0.075);            /* 每条弧的半径间距 */
+      var w = Math.max(13, base * 0.042);               /* 弧宽 */
+      var pulse = 0.6 + 0.4 * Math.sin(Date.now() / 240);
+
       X.save();
-      X.setLineDash([4, 6]);
-      X.lineDashOffset = -(Date.now() % 1600) / 160;
-      dots.forEach(function (d, di) {
-        var ang = Math.atan2(d.y - cy, d.x - cx) + (di - (dots.length - 1) / 2) * 0.12;
-        var sx = cx + Math.cos(ang) * base * 0.99;
-        var sy = cy + Math.sin(ang) * base * 0.99;
-        var on = d.m.phase === "active";
-        X.beginPath();
-        X.moveTo(sx, sy);
-        X.quadraticCurveTo((sx + d.x) / 2, (sy + d.y) / 2 - 18, d.x, d.y);
-        X.strokeStyle = d.m.phase === "failed" ? "rgba(255,138,107,0.5)" : (on ? "rgba(143,224,200,0.55)" : "rgba(150,172,200,0.28)");
-        X.lineWidth = on ? 1.5 : 1;
-        X.stroke();
-      });
-      X.restore();
-
-      /* 圆 + 名字 + 手上的任务数 */
-      dots.forEach(function (d) {
-        var m = d.m, px = d.x, py = d.y;
-        var col = m.phase === "failed" ? "#ff8a6b" : (m.phase === "active" ? "#8fe0c8" : "rgba(160,175,200,0.6)");
-        var mine = tasks.filter(function (k) { return k.ownerId === m.id && k.status !== "completed" }).length;
-        X.beginPath(); X.arc(px, py, rad, 0, TAU);
-        X.strokeStyle = col; X.lineWidth = m.phase === "active" ? 2.2 : 1.3; X.stroke();
-        X.beginPath(); X.arc(px, py, rad * 0.62, 0, TAU);
-        X.strokeStyle = "rgba(150,170,200,0.28)"; X.lineWidth = 1; X.stroke();
-        X.fillStyle = m.phase === "active" ? "#eef4ff" : "rgba(200,212,230,0.8)";
-        X.font = "600 " + Math.round(rad * 0.62) + 'px "Segoe UI",sans-serif';
-        X.textAlign = "center"; X.textBaseline = "middle";
-        X.fillText(String(mine), px, py + 1);
-        X.textBaseline = "alphabetic";
-        X.font = "10px ui-monospace,Consolas,monospace";
+      X.lineCap = "round";
+      mem.forEach(function (m, i) {
+        var r = r0 + i * step;
+        var open = openOf(m);
+        var active = m.phase === "active";
+        var failed = m.phase === "failed";
+        var col = failed ? "#ff8a6b" : (active ? "#8fe0c8" : "rgba(160,175,200,0.55)");
+        /* 底带 */
+        X.beginPath(); X.arc(cx, cy, r, A0, A1);
+        X.strokeStyle = "rgba(150,170,200,0.13)"; X.lineWidth = w; X.stroke();
+        /* 份额：手上未完成任务占最忙成员的比例 */
+        var frac = failed ? 0.14 : (open === 0 ? 0.10 : Math.max(0.16, Math.min(1, open / maxOpen)));
+        var span = (A1 - A0) * frac;
+        X.save();
+        if (active) { X.shadowColor = col; X.shadowBlur = 8 + 8 * pulse; }
+        X.beginPath(); X.arc(cx, cy, r, A0, A0 + span);
+        X.strokeStyle = col; X.lineWidth = w; X.stroke();
+        X.restore();
+        /* 名字：贴在弧的外侧中部 */
+        var am = (A0 + A1) / 2;
+        X.font = "600 11px ui-monospace,Consolas,monospace";
         X.fillStyle = col;
-        X.fillText(String(m.name || "").slice(0, 10), px, py + rad + 13);
         X.textAlign = "left";
-        HIT.dots.push({
-          kind: "team", x: px, y: py, rad: rad + 5,
-          label: (m.name || "member") + " · " + (m.phase || ""),
+        X.fillText(String(m.name || "").slice(0, 12), cx + Math.cos(am) * (r + w * 0.9), cy + Math.sin(am) * (r + w * 0.9) + 4);
+        /* 命中：极坐标，交给 hitAt 的环状判定 */
+        HIT.items.push({
+          kind: "team", r: r, a0: A0, a1: A1,
+          label: (m.name || "member") + " · " + (m.phase || "") + " · 在办 " + open,
           member: m
         });
       });
+      X.lineCap = "butt";
+      X.restore();
     })();
+
 
     /* 层标签 */
     var lastStep = (M.sSteps && M.sSteps.length) ? M.sSteps[M.sSteps.length - 1] : null;
