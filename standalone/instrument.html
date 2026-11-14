@@ -850,6 +850,14 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
         var mem = tm.members || [], tsk = tm.tasks || [];
         var byId = {};
         mem.forEach(function (m) { byId[m.id] = m.name });
+        var meId = (M.session && M.session.id) || '';
+        if (meId) byId[meId] = 'lead';   /* 根会话就是队长 */
+
+        /* 队长本身不产生 team/member 事件，手动补一行 */
+        var rows = mem.slice();
+        if (!rows.some(function (m) { return m.id === meId }) && meId) {
+          rows.unshift({ id: meId, name: 'lead', phase: 'active' });
+        }
         var open = 0, prog = 0, done = 0;
         tsk.forEach(function (k) {
           if (k.status === 'pending') open++;
@@ -857,7 +865,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
           else if (k.status === 'completed') done++;
         });
         var th = '<div class="rw hdrow">' + cell('成员') + cell('阶段') + cell('任务') + '</div>';
-        mem.forEach(function (m) {
+        rows.forEach(function (m) {
           var mine = tsk.filter(function (k) { return k.ownerId === m.id && k.status !== 'completed' }).length;
           var cls = m.phase === 'active' ? 'run' : (m.phase === 'failed' ? 'bad' : 'done');
           th += '<div class="rw">' + cell('<span class="' + cls + '">' + esc(m.name) + '</span>') +
@@ -875,7 +883,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
           });
         }
         $('teamTable').innerHTML = th;
-        $('sTeam').textContent = mem.length + ' 人 · 待办 ' + open + ' / 进行 ' + prog + ' / 完成 ' + done;
+        $('sTeam').textContent = rows.length + ' 人 · 待办 ' + open + ' / 进行 ' + prog + ' / 完成 ' + done;
       }
     }
 
