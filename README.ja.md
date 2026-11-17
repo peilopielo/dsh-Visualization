@@ -6,7 +6,7 @@ DeepSeek Harness 用の**セッション計器**。サイドバーのリング�
 七層のリング＋ターン履歴＋ステップのはしご線として描かれ、ツール呼び出し・バックグラウンド作業・
 承認・ファイル変更がすべて載ります。データはセッションログを直接読み、会話中もリアルタイム更新。
 
-![インターフェース](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/shot-overview.png)
+![インターフェース](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/shot-overview.png?v=2)
 
 ## インストール
 

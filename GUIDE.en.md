@@ -32,7 +32,7 @@ The panel has three areas:
 | right column | session flow, context, background jobs, subagents, agent team, turn timeline |
 | bottom | event table, grouped by turn, newest first |
 
-![Rings](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-rings.png)
+![Rings](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-rings.png?v=2)
 
 Direction matters: **12 o'clock is the newest data**; older data runs clockwise.
 
@@ -54,7 +54,7 @@ Every layer can be switched off (see the controls); the remaining rings redistri
 
 They live in the translucent panel on the left, in four rows: session, ring toggles, view/scope/agents, replay.
 
-![Controls](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-controls.png)
+![Controls](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-controls.png?v=2)
 
 | Control | Effect |
 |---|---|

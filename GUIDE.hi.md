@@ -32,7 +32,7 @@ npm i dsh-visualization
 | दायाँ स्तंभ | सत्र प्रवाह, संदर्भ, बैकग्राउंड कार्य, सबएजेंट, टीम, टर्न टाइमलाइन |
 | नीचे | इवेंट तालिका, टर्न से, नए सबसे ऊपर |
 
-![छल्ले](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-rings.png)
+![छल्ले](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-rings.png?v=2)
 
 दिशा मायने रखती है: **12 बजे की दिशा सबसे नया डेटा** है, पुराना दक्षिणावर्त चलता है।
 
@@ -54,7 +54,7 @@ npm i dsh-visualization
 
 बाएँ पारदर्शी पैनल में चार पंक्तियाँ: सत्र, छल्ले, दृश्य/सीमा/एजेंट, रीप्ले।
 
-![कंट्रोल](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-controls.png)
+![कंट्रोल](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-controls.png?v=2)
 
 | कंट्रोल | प्रभाव |
 |---|---|

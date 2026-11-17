@@ -6,7 +6,7 @@ DeepSeek Harness के लिए **सत्र यंत्र**: साइड
 छल्लों, टर्न टाइमलाइन और चरण-सीढ़ी रेखाओं के रूप में बनता है, जिस पर टूल कॉल, बैकग्राउंड काम, स्वीकृतियाँ
 और फ़ाइल बदलाव सब दिखते हैं। डेटा सीधे सत्र लॉग से पढ़ा जाता है और बातचीत के दौरान लाइव बदलता रहता है।
 
-![इंटरफ़ेस](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/shot-overview.png)
+![इंटरफ़ेस](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/shot-overview.png?v=2)
 
 ## इंस्टॉल
 

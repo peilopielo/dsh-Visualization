@@ -30,7 +30,7 @@ npm i dsh-visualization
 | 오른쪽 | 세션 흐름, 컨텍스트, 백그라운드 작업, 서브에이전트, 팀, 턴 타임라인 |
 | 아래 | 이벤트 표(턴별, 최신 순) |
 
-![링](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-rings.png)
+![링](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-rings.png?v=2)
 
 방향이 중요합니다: **12시 방향이 최신**이고 오래될수록 시계 방향으로 갑니다.
 
@@ -52,7 +52,7 @@ npm i dsh-visualization
 
 왼쪽 반투명 패널에 네 줄로 놓입니다: 세션, 링, 보기/범위/에이전트, 재생.
 
-![컨트롤](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-controls.png)
+![컨트롤](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-controls.png?v=2)
 
 | 컨트롤 | 효과 |
 |---|---|

@@ -6,7 +6,7 @@ DeepSeek Harness용 **세션 계기판**. 사이드바의 링 아이콘을 열�
 단계별 사다리 선으로 그려지고, 도구 호출·백그라운드 작업·승인·파일 변경이 모두 올라갑니다.
 데이터는 세션 로그를 직접 읽고 대화 중에도 실시간으로 갱신됩니다.
 
-![인터페이스](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/shot-overview.png)
+![인터페이스](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/shot-overview.png?v=2)
 
 ## 설치
 

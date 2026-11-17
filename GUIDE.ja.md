@@ -32,7 +32,7 @@ npm i dsh-visualization
 | 右列 | セッションの流れ、コンテキスト、バックグラウンド、サブエージェント、チーム、ターン履歴 |
 | 下部 | イベント表（ターン別、新しい順） |
 
-![リング](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-rings.png)
+![リング](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-rings.png?v=2)
 
 向きが重要です：**12 時の方向が最新**で、古いものほど時計回りに並びます。
 
@@ -54,7 +54,7 @@ npm i dsh-visualization
 
 左の半透明パネルに四行で並びます：セッション、リング、表示/範囲/エージェント、再生。
 
-![コントロール](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-controls.png)
+![コントロール](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-controls.png?v=2)
 
 | コントロール | 効果 |
 |---|---|

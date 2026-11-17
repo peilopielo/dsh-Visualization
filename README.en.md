@@ -6,7 +6,7 @@ A **session instrument** for DeepSeek Harness: a sidebar icon that opens a live 
 current session as seven rings, a turn timeline, per-step ladders, background jobs, approvals and
 file changes — read straight from the session log, updated while the conversation runs.
 
-![The instrument](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/shot-overview.png)
+![The instrument](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/shot-overview.png?v=2)
 
 **English** · **[中文](#中文)** below.
 

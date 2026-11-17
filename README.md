@@ -5,7 +5,7 @@
 DeepSeek Harness 的**会话仪表盘**：侧栏一个环图标，打开后把当前会话画成七层环 + 轮次时间线 +
 逐步阶梯连线，工具调用、后台任务、审批、文件变更都在上面，数据直接读会话日志，对话进行中实时更新。
 
-![界面](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/shot-overview.png)
+![界面](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/shot-overview.png?v=2)
 
 ## 安装
 

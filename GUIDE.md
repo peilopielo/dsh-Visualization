@@ -30,7 +30,7 @@ npm i dsh-visualization
 | 右栏 | 会话逻辑链、上下文、后台任务、子智能体、智能体团队、轮次时间线 |
 | 底部 | 事件表，按轮分组，最新的在最上面 |
 
-![环](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-rings.png)
+![环](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-rings.png?v=2)
 
 方向很重要：环上**12 点方向是最新的数据**，越旧越顺时针。
 
@@ -52,7 +52,7 @@ npm i dsh-visualization
 
 在控制条的半透明面板里，分四行：会话、环开关、视图/范围/智能体、回放。
 
-![控件](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-controls.png)
+![控件](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-controls.png?v=2)
 
 | 控件 | 作用 |
 |---|---|

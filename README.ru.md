@@ -6,7 +6,7 @@
 нарисованную как семь колец плюс хронология ходов и лестницы шагов; на них видны вызовы инструментов,
 фоновые задачи, апрувы и правки файлов. Данные читаются прямо из журнала сессии и обновляются на ходу.
 
-![Интерфейс](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/shot-overview.png)
+![Интерфейс](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/shot-overview.png?v=2)
 
 ## Установка
 

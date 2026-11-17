@@ -32,7 +32,7 @@ npm i dsh-visualization
 | правая колонка | поток сессии, контекст, фоновые задачи, субагенты, команда, хронология |
 | низ | таблица событий по ходам, новые сверху |
 
-![Кольца](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-rings.png)
+![Кольца](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-rings.png?v=2)
 
 Направление важно: **12 часов — самые новые данные**, старые идут по часовой стрелке.
 
@@ -54,7 +54,7 @@ npm i dsh-visualization
 
 Оно живёт в полупрозрачной панели слева, в четыре строки: сессия, кольца, вид/диапазон/агенты, повтор.
 
-![Управление](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-controls.png)
+![Управление](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-controls.png?v=2)
 
 | Элемент | Действие |
 |---|---|
