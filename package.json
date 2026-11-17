@@ -1,6 +1,6 @@
 {
   "name": "dsh-visualization",
-  "version": "0.1.37",
+  "version": "0.1.39",
   "description": "Seven-ring session instrument for DeepSeek Harness: turn timeline, per-step ladders, jobs, approvals, changes, subagents and agent teams. Lively desktop wallpaper included.",
   "type": "module",
   "main": "index.js",
