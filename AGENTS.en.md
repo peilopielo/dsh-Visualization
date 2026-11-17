@@ -21,6 +21,7 @@ plugin toggle only remounts routes, it does not re-evaluate loaded ESM.
 | Path | Role |
 |---|---|
 | `standalone/instrument.html` | **the single source of the page.** Edit this, then build. |
+| `standalone/i18n/*.js` | language packs (en/ja/ko/ru/hi): `dict` (whole strings), `rules` (regex), `fn` (logic); inlined into `web/index.html` at build time |
 | `web/index.html` | **generated** — never edit by hand |
 | `standalone/bridge.cjs` | standalone dev server (port 8787), not shipped |
 | `fold.cjs` | host: session discovery, zstd frames, incremental fold, HTTP/SSE, fixed-port helper |
@@ -76,7 +77,7 @@ prefix is a child session.
 `if (RINGVIS[n])` block in `draw()`, and `hitReg({...})` so hover/click works. Add a branch in
 `showDetail()` if the card needs fields.
 
-**A language** — `EN` (whole-string matches), `EN_RULES` (templated phrases), `EN_FN` (logic). `LANG`
+**A language** — copy `standalone/i18n/en.js` to `<code>.js`, add one `<script src="i18n/<code>.js">` in `standalone/instrument.html`, and append the code to `LANGS`. `dict` handles whole strings, `rules` handles templated ones (**use `$1` replacements, not functions** — `tr()` calls `k.replace(re, str)`), `fn` handles branching sentences. `LANG`
 is `'zh' | 'en'`; to add a third, turn it into a list and key the dictionaries by code.
 
 **A colour** — `toolColor(name)`.

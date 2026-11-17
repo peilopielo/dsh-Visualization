@@ -15,6 +15,7 @@ node build.cjs                  # standalone/instrument.html → web/index.html
 | 路径 | 作用 |
 |---|---|
 | `standalone/instrument.html` | **页面唯一源文件**，改它再 build |
+| `standalone/i18n/*.js` | 语言包（en/ja/ko/ru/hi）：`dict` 整串、`rules` 正则、`fn` 带逻辑；构建时内联进 `web/index.html` |
 | `web/index.html` | **生成物**，不要手改 |
 | `fold.cjs` | 宿主：会话发现、zstd 帧解析、增量折叠、HTTP/SSE、固定端口服务 |
 | `index.js` | 宿主入口：注册路由、注入 origin/策略、启动固定端口 |
@@ -56,7 +57,7 @@ VIEWED 有三个写入入口：`agent/created`（建 Agent 时，每个会话只
 
 **新环** —— `RINGVIS`/`RING_NAME`/`RING_COL`、`draw()` 里的绘制块、`hitReg(...)` 登记、`showDetail()` 分支。
 
-**新语言** —— `EN` 词典 + `EN_RULES` 正则 + `EN_FN` 逻辑；`LANG` 现在写死两门，要加就把字典按语言代码分键。
+**新语言** —— 复制 `standalone/i18n/en.js` 改成 `<代码>.js`，在 `standalone/instrument.html` 顶部加一行 `<script src="i18n/<代码>.js"></script>`，再把代码加进 `LANGS`。`dict` 管整串、`rules` 管带数字的模板（**替换串要用 `$1`，不要写函数**——`tr()` 是按 `k.replace(re, str)` 调的）、`fn` 管需要分支的句子。
 
 **新配色** —— `toolColor(name)`。
 

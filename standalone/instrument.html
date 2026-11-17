@@ -279,6 +279,11 @@ body.compact .dash{grid-template-columns:1fr}
   <div class="credit">DSH Visualization by Ryder191 · PolyForm NC · visual language: HALOFLUX</div>
 </div>
 
+<script src="i18n/en.js"></script>
+<script src="i18n/ja.js"></script>
+<script src="i18n/ko.js"></script>
+<script src="i18n/ru.js"></script>
+<script src="i18n/hi.js"></script>
 <script>
 (function () {
   'use strict';
@@ -673,102 +678,38 @@ body.compact .dash{grid-template-columns:1fr}
   }
 
   /* ---------------- 多语言：中文是源，英文覆盖 ---------------- */
-  var EN = {
-    '轮次': 'Turns', '步骤': 'Steps', '工具调用': 'Tool calls', '本步耗时': 'Step time',
-    '技能': 'Skills', '本步': 'Step', '已加载': 'loaded', '工具': 'Tools', '用量': 'Usage',
-    '数据源：': 'Source: ', '实时': 'live', '前更新': 'ago', '条事件': 'events', '会话：': 'Session: ',
-    '自动 · 跟最新会话': 'Auto · newest session',
-    '会话逻辑 / 谁驱动了谁': 'SESSION FLOW / what drives what',
-    '上下文占用 / CONTEXT': 'CONTEXT',
-    '后台任务 / 工具在后台继续跑': 'JOBS / running in background',
-    '轮次时间线 / 这个会话怎么走过来的': 'TURNS / how this session went',
-    '工具统计 / 每种工具累计干了多少': 'TOOLS / total per kind',
-    'Event log / 真实事件': 'EVENT LOG / real events',
-    '全部': 'all', '运行中': 'running', '已结束': 'done', '有失败': 'has failures', '耗时 >1s': 'took >1s',
-    '环旋转：开': 'spin: on', '环旋转：关': 'spin: off',
-    '连线：节点连线': 'lines: ladders', '连线：中心光束': 'lines: beams', '连线：两者都有': 'lines: both',
-    '占比：次数': 'share: count', '占比：耗时': 'share: time',
-    '回到实时': 'back to live', '重播': 'replay', '暂停': 'pause', '继续': 'resume',
-    '↓ 因果': '↓ causal', '复用': 'load', '会话': 'Session', '任务': 'Job', '审批': 'Approval', '变更': 'Change',
-    '输入': 'in', '输出': 'out', '缓存': 'cache', '模型': 'model',
-    '类型': 'kind', '状态': 'state', '次数': 'count', '累计': 'total', '最近': 'last',
-    '调用次数': 'calls', '累计 / 平均': 'total / avg', '失败 / 最近': 'fail / last',
-    '最近几次调用': 'recent calls', '最近 6 次调用': 'last 6 calls',
-    '你的请求': 'your prompt', '步数 / 工具': 'steps / tools', '时长': 'duration', '交付': 'delivered',
-    '时间窗': 'window', '累计耗时': 'total time', '涉及轮次': 'turn', '这几步': 'steps',
-    '加载次数': 'loads', '最近使用': 'last used', '运行时长': 'ran for', '命令': 'command',
-    '时间': 'time', '结果': 'result', '轮次': 'turn',
-    '文件变更': 'file change', '交付文件': 'deliverable', '后台命令': 'command', '后台任务': 'job',
-    '执行命令': 'Command', '修改文件': 'Edit', '写入文件': 'Write', '读取文件': 'Read',
-    '查找文件': 'Glob', '搜索内容': 'Grep', '查看图片': 'Image', '抓取网页': 'Fetch',
-    '列后台任务': 'Jobs', '停止后台任务': 'Kill job', '加载技能': 'Skill', '交付文件 ': 'Present',
-    '（无文字请求）': '(no prompt)', '待定': 'pending', '进行中': 'running',
-    '用户': 'user', '名称': 'name', '详情': 'detail', '耗时': 'time', '成': 'ok', '层': 'layer',
-    '工作可视化': 'dsh session instrument', '⧉ 新窗口': '⧉ window', '环': 'rings', '数据源：未连接': 'Source: offline',
-    '智能体团队 / 成员与任务板': 'TEAM / members and task board',
-    '子圆：': 'circles: ', '团队：': 'team: ',
-    '⚙ 设置': '⚙ settings', '字号': 'text size', '紧凑': 'compact', '标准': 'standard', '大字': 'large',
-    '布局': 'layout', '紧凑（隐藏右栏）': 'compact (hide right column)', '导出': 'export',
-    '存成 PNG': 'save PNG', '存成 JSON': 'save JSON',
-    '成员': 'member', '阶段': 'phase', '任务': 'task', '负责人': 'owner',
-    '进行中': 'active', '准备中': 'provisioning', '失败': 'failed', '待办': 'pending',
-    '子智能体 / 派出去的分身': 'SUBAGENTS / delegated agents',
-    '分身': 'agent', '个': '', '在跑': 'running',
-    '① 会话': '① Session', '② 步骤': '② Steps', '③ 技能': '③ Skills', '④ 工具': '④ Tools',
-    '⑤ 任务': '⑤ Jobs', '⑥ 审批': '⑥ Approvals', '⑦ 变更': '⑦ Changes',
-    '▶ 重播': '▶ replay', '回到实时': 'back to live', '按轮分组 · 新在最上': 'grouped by turn · newest first',
-
-  }
-  var EN_RULES = [
-    [/^轮次 \/ (\d+)$/, 'Turns / $1'],
-    [/^本步 ([\d.]+s)$/, 'step $1'],
-    [/^(\d+)ms\/条$/, '$1ms/row'],
-    [/^数据源：(.+)$/, 'Source: $1'],
-    [/^重放 (.+)$/, 'replay $1'],
-
-    [/^(\d+) 步$/, '$1 steps'],
-    [/^(\d+) 工具$/, '$1 tools'],
-    [/^(\d+) 轮$/, '$1 turns'],
-    [/^共 (\d+) 条 · 新在最上$/, '$1 rows · newest first'],
-    [/^(\d+) 次 \/ (\d+) 种$/, '$1 calls / $2 kinds'],
-    [/^(\d+) 运行中 \/ 共 (\d+)$/, '$1 running / $2 total'],
-    [/^(\d+) 个$/, '$1'],
-    [/^(\d+) 步 · (\d+) 工具 · (.+)$/, '$1 steps · $2 tools · $3'],
-    [/^(\d+) 步 · (\d+) 工具$/, '$1 steps · $2 tools'],
-    [/^(\d+) 处$/, '$1 changes'],
-    [/^(\d+) 次$/, '$1'],
-    [/^运行 (\d+) · 共 (\d+)$/, 'running $1 · total $2'],
-  ]
+  /* 六种语言：中文是原文，其余走 i18n/<lang>.js 的词典 */
+  var LANGS = ['zh', 'en', 'ja', 'ko', 'ru', 'hi'];
+  var LANG_LABEL = { zh: '中', en: 'EN', ja: '日', ko: '한', ru: 'РУ', hi: 'हि' };
   var LANG = (function () {
     try {
       var q = new URLSearchParams(location.search).get('lang');
-      if (q === 'zh' || q === 'en') return q;
+      if (LANGS.indexOf(q) >= 0) return q;
       var s = localStorage.getItem('dshviz.lang');
-      if (s === 'zh' || s === 'en') return s;
-      return /^zh/i.test(navigator.language || '') ? 'zh' : 'en';
+      if (LANGS.indexOf(s) >= 0) return s;
+      var nav = String(navigator.language || '').toLowerCase();
+      for (var i = 0; i < LANGS.length; i++) if (nav.indexOf(LANGS[i]) === 0) return LANGS[i];
+      return 'en';
     } catch (e) { return 'zh' }
   })();
-  var EN_FN = [
-    [/^连线轮数：(.+) \/ 共 (\d+) 轮$/, function (m) {
-      return 'line turns: ' + (m[1] === '全部' ? 'all' : m[1]) + ' / ' + m[2] + ' total'
-    }],
-    [/^显示轮数：(.+)$/, function (m) { return 'show turns: ' + (m[1] === '全部' ? 'all' : m[1]) }],
-    [/^实时 · ([\d.]+s) 前更新 · (\d+) 条事件 · preset (.+)$/, function (m) {
-      return 'live · updated ' + m[1] + ' ago · ' + m[2] + ' events · preset ' + m[3]
-    }],
-    [/^(.*)工作可视化$/, function (m) { return (m[1] || '') + 'dsh session instrument' }],
-    [/^共 (\d+) 条 · 按轮分组 · 新在最上$/, function (m) { return m[1] + ' rows · grouped by turn · newest first' }],
-  ]
+  var PACK = (function () {
+    var all = window.__I18N || {};
+    return all[LANG] || { dict: {}, rules: [], fn: [] };
+  })();
+
   function tr(s) {
     var k = String(s).trim();
-    if (!k) return s;
-    if (EN[k]) return s.replace(k, EN[k]);
-    for (var i = 0; i < EN_RULES.length; i++) {
-      if (EN_RULES[i][0].test(k)) return s.replace(k, k.replace(EN_RULES[i][0], EN_RULES[i][1]));
+    if (!k || LANG === 'zh') return s;
+    var D = PACK.dict || {};
+    if (D[k]) return s.replace(k, D[k]);
+    var R = PACK.rules || [];
+    for (var i = 0; i < R.length; i++) {
+      if (R[i][0].test(k)) return s.replace(k, k.replace(R[i][0], R[i][1]));
     }
-    for (var j = 0; j < EN_FN.length; j++) {
-      var m2 = k.match(EN_FN[j][0]);
-      if (m2) return s.replace(k, EN_FN[j][1](m2));
+    var F = PACK.fn || [];
+    for (var j = 0; j < F.length; j++) {
+      var m2 = k.match(F[j][0]);
+      if (m2) return s.replace(k, F[j][1](m2));
     }
     return s;
   }
@@ -2092,9 +2033,9 @@ body.compact .dash{grid-template-columns:1fr}
 
   var langBtn = $('langBtn');
   if (langBtn) {
-    langBtn.textContent = LANG === 'zh' ? '中 / EN' : 'EN / 中';
+    langBtn.textContent = LANG_LABEL[LANG] + ' / ' + LANG_LABEL[LANGS[(LANGS.indexOf(LANG) + 1) % LANGS.length]];
     langBtn.addEventListener('click', function () {
-      try { localStorage.setItem('dshviz.lang', LANG === 'zh' ? 'en' : 'zh') } catch (e) { }
+      try { localStorage.setItem('dshviz.lang', LANGS[(LANGS.indexOf(LANG) + 1) % LANGS.length]) } catch (e) { }
       location.reload();
     });
   }
