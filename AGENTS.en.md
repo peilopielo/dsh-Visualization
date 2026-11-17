@@ -11,8 +11,6 @@ For using the plugin see [GUIDE.en.md](GUIDE.en.md).
 
 ```powershell
 node build.cjs                  # standalone/instrument.html → web/index.html
-node make-wallpaper.cjs         # web/index.html → wallpaper/_experiments/index.html (adds <base>, drops -webkit-line-clamp)
-node make-wallpaper-full.cjs    # full page with minimal CSS (WE experiment, see §9)
 ```
 
 Changing anything under `fold.cjs` / `index.js` (the host half) **requires a DSH restart** — the
@@ -29,11 +27,7 @@ plugin toggle only remounts routes, it does not re-evaluate loaded ESM.
 | `index.js` | host entry: registers the route, injects origin/policy, starts the helper |
 | `client.js` | client half: sidebar icon + main-panel iframe |
 | `build.cjs` | regenerates `web/index.html` from the source page |
-| `wallpaper/` | wallpaper pages + Lively package + `_experiments/` (dead ends, see its README) |
-| `wallpaper-live.cjs` | persistent-capture pipeline (Edge + CDP, JPEG, ~4.9 fps) |
-| `wallpaper-capture.cjs` | crop pipeline: full shot → three strips (top/right/bottom) |
-| `we-deploy.ps1` | deploy a page into Wallpaper Engine's project (handles the file lock) |
-| `we-cdp.cjs` | turns on WE's CEF devtools port |
+| `wallpaper/` | Lively wallpaper package (`lively/` + `lively-package.zip`), see its README |
 | `we-css-keep.cjs` | CSS bisect helper (`we-css-split.cjs` is the older variant) |
 | `screenshots.json` | storefront screenshots declared in-repo |
 
@@ -44,8 +38,8 @@ plugin toggle only remounts routes, it does not re-evaluate loaded ESM.
 2. **Host changes need a restart.** `fold.cjs` / `index.js` are ESM; a plugin toggle is not enough.
 3. **Never overwrite the page with a one-liner.** It has been destroyed that way once — use edits or a
    small `.cjs` patch script. Recovery is documented at the end of this file.
-4. **Wait for the wallpaper file lock.** WE keeps `projects/.../index.html` open; copy silently fails
-   while it runs. Kill WE, delete the file, then copy (`we-deploy.ps1` does exactly this).
+4. **Wallpapers are Lively-only.** Do not reintroduce Wallpaper Engine: its renderer cannot
+   composite this page. The old experiment set lives in git history.
 
 ## 4. Data flow
 
@@ -96,8 +90,6 @@ is `'zh' | 'en'`; to add a third, turn it into a list and key the dictionaries b
 | `http://127.0.0.1:8799/state` | the fixed-port helper the wallpapers use |
 | `node standalone/shot.cjs <url> out.png W H` | screenshot any page (CDP over pipes) |
 | `SHOT_EVAL=...` | evaluate JS in the page and print the result |
-| `node we-cdp.cjs` | opens WE's CEF devtools port (8080) |
-| `node we-cdp-probe.cjs` | reads runtime state / console from the WE wallpaper page |
 
 ## 7. Release flow
 
@@ -116,23 +108,20 @@ git add -A; git commit -m "..."; git push
 
 ## 8. Known traps
 
-1. **WE's renderer crashes on the full page.** Reproduced on Chrome 146; independent of protocol
-   (`file://` and `http://` both crash) and of the CSS file (a minimal stylesheet still crashes). The
-   crash correlates with compositing the `.rings` subtree. Do not spend more time on it — use Lively.
-2. **`-webkit-line-clamp` is an independent crash trigger** in WE. `make-wallpaper.cjs` strips it.
-3. **Multi-frame zstd.** The log is append-only multi-frame; older Node decodes only frame 1. Split on
+1. **Do not expect Wallpaper Engine to work.** Its renderer cannot composite this page (reproduced
+   on Chrome 146, independent of protocol, stylesheet and iframe wrapping). Lively is the only host.
+2. **Multi-frame zstd.** The log is append-only multi-frame; older Node decodes only frame 1. Split on
    the magic `28 B5 2F FD`… **only as a fallback**: the correct path is `zstdFrames()`, which parses
    headers and blocks. Magic-scanning is wrong (the real log contains 4838 magic occurrences).
-4. **File lock, WE running** — see rule 4.
-5. **`pointer-events` on overlay layers.** A full-screen overlay without `pointer-events:none` kills
+3. **`pointer-events` on overlay layers.** A full-screen overlay without `pointer-events:none` kills
    all canvas hover/click. `elementFromPoint` returning the overlay instead of `#net` is the symptom.
-6. **Init order.** `M.sSteps/sJobs/sTools/sLog/sStats` must be `[]` before the first `draw()`, or the
+4. **Init order.** `M.sSteps/sJobs/sTools/sLog/sStats` must be `[]` before the first `draw()`, or the
    canvas freezes. `DEBUG` must be module-scope, not inside `render()`.
-7. **`CN.turns = 0` means "all"** — guard with `turnLimit = CN.turns || 999`, else no lines are drawn.
-8. **`tool/result` id lives at `message.source.callId`**, not `data.toolCallId`.
-9. **Zoom-dependent layout** — the rings measure `.rings.getBoundingClientRect()`; if that element is
+5. **`CN.turns = 0` means "all"** — guard with `turnLimit = CN.turns || 999`, else no lines are drawn.
+6. **`tool/result` id lives at `message.source.callId`**, not `data.toolCallId`.
+7. **Zoom-dependent layout** — the rings measure `.rings.getBoundingClientRect()`; if that element is
    hidden or zero-sized, `G.base` is 0 and `draw()` returns early (blank panel with no error).
-10. **Never disable `ui-settings` from inside Settings** — the settings page *is* that plugin, so turning
+8. **Never disable `ui-settings` from inside Settings** — the settings page *is* that plugin, so turning
     it off leaves you with a permanently blank page. Recover by editing
     `~/.dsh/profiles/desktop/cordis.patch.yml`:
     ```yaml
@@ -142,7 +131,7 @@ git add -A; git commit -m "..."; git push
         enabled: false
     ```
     → change to `enabled: true` (or delete the entry). The file is reloaded live; no restart needed.
-11. **An emptied `cordis.patch.yml` (`[]`) leaves the package installed but its entry gone.** The plugin
+9. **An emptied `cordis.patch.yml` (`[]`) leaves the package installed but its entry gone.** The plugin
     manager records installed plugins as `insert` entries in that patch; wipe it and only the
     `package.json` dependency and the `node_modules` junction survive — the loader has no entry to read.
     Symptoms: your `entryId` is **absent from `plugin_manager list_plugins`**, the fixed port (8799) is
@@ -150,14 +139,14 @@ git add -A; git commit -m "..."; git push
     `remove_bundle` → `install_bundle` (a local `link:` install, seconds, no network); the entry is
     rebuilt. Rule of thumb: dependency present + junction present + entry missing = this trap.
 
-## 9. Wallpaper routes (and why)
+## 9. Wallpaper
 
-| Route | Frame rate | Notes |
-|---|---|---|
-| Lively + `wallpaper/lively/index.html` | full | WebView2 (Edge) — renders fine, mouse input forwarded |
-| WE + `wallpaper/live.html` + `wallpaper-live.cjs` | ~4.9 fps | JPEG 200 KB/frame, persistent Edge via CDP |
-| WE + three strips (`wallpaper/hybrid.html`) | native rings, 8 s text | hybrid: canvas rings + screenshot panels |
-| WE + full page (`make-wallpaper-full.cjs`) | — | dead end: crashes (trap 1) |
+Lively is the only route: `wallpaper/lively/` + `lively-package.zip` (WebView2, full frame rate,
+mouse input forwarded).
+
+> The whole Wallpaper Engine experiment set (screenshot pipeline, hybrid page, CEF debug scripts)
+> was removed: WE cannot render this page, only approximate it at ~5 fps without interaction —
+> not worth maintaining. The old implementation lives in git history.
 
 ## 10. Recovering the page
 

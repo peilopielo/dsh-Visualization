@@ -49,5 +49,5 @@ When nothing changes the SSE connection sends zero bytes (apart from a 15 s hear
   1.5 k tools — roughly 10–20 ms per frame.
 - **Two UI languages** (zh/en).
 - **Read-only**: the instrument never writes session files.
-- **Wallpaper Engine cannot render the page** — its CEF crashes on it; use Lively instead
+- **Lively is the only wallpaper host that works** — other hosts (Wallpaper Engine included) cannot render the page
   (see [GUIDE.en.md §8](GUIDE.en.md#8-as-a-desktop-wallpaper)).

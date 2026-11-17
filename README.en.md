@@ -29,9 +29,7 @@ the panel natively at the display's frame rate, and the panel stays clickable on
 2. Download [`wallpaper/lively-package.zip`](wallpaper/lively-package.zip) from this repository
 3. Drag the zip into Lively
 
-> Wallpaper Engine is **not** the recommended route: its own renderer crashes on this page (reproduced
-> on its Chrome 146, independent of protocol and of the stylesheet). A screenshot-based workaround is
-> documented in [wallpaper/README.md](wallpaper/README.en.md), but it runs at ~5 fps.
+> Lively only: other wallpaper hosts (Wallpaper Engine among them) cannot render this page.
 
 More: [GUIDE.md §8](GUIDE.en.md#8-as-a-desktop-wallpaper).
 

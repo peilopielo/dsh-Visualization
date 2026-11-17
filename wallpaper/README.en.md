@@ -1,38 +1,22 @@
 [中文](README.md) | **English**
 
-# wallpaper —
+# wallpaper — Lively desktop wallpaper
 
-Three ways to put the instrument on the desktop. Pick one, in order of quality.
+Putting the instrument on the desktop needs **only Lively Wallpaper** (free, open source). It renders
+with WebView2 at the display's frame rate and forwards mouse input, so the rings and tables stay
+clickable on the desktop.
 
-| Route | Frame rate | Interactive | Needs | Files |
-|---|---|---|---|---|
-| **Lively** (recommended) | display rate | yes (mouse forwarded) | [Lively](https://github.com/rocksdanister/lively), free | `lively/`, `lively-package.zip` |
-| **WE screenshot** | ~4.9 fps | no | Wallpaper Engine | `live.html` + `wallpaper-live.cjs` |
-| **WE hybrid** | rings native, text 8 s | no | Wallpaper Engine | `hybrid.html` + `wallpaper-capture.cjs` |
-
-## Lively (full frame rate)
+## Install
 
 1. Install [Lively Wallpaper](https://github.com/rocksdanister/lively)
-2. Drag `lively-package.zip` into Lively — or **Add Wallpaper → open file** → `lively/index.html`
+2. Drag `lively-package.zip` into Lively, or **Add wallpaper → open file** → `lively/index.html`
 
-The page probes `127.0.0.1:8799` … `8795` and loads whichever answers; if DSH is off it shows a hint
-and retries every 5 seconds. Lively forwards mouse input, so the panel is clickable on the desktop.
-
-## Wallpaper Engine (screenshot mode)
-
-Wallpaper Engine's own renderer **crashes** on the full page (Chrome 146, independent of protocol and
-of the stylesheet). The workaround captures the page and displays the picture:
-
-```powershell
-node wallpaper-live.cjs 200 78    # ≈4.9 fps, 200 KB per frame
-```
-
-Then point the WE project at `live.html`. For lower CPU use `wallpaper-capture.cjs 8` (8 s) together
-with the three-strip hybrid (`hybrid.html`).
+The page probes `127.0.0.1:8799` … `8795` and loads whichever answers; when DSH is off it shows a hint
+and retries every 5 seconds.
 
 ## Ports
 
-The plugin opens a fixed local port so wallpapers never need to know DSH's random Web port:
+The plugin opens a fixed local port so the wallpaper never has to know DSH's random Web port:
 
 ```
 8799 → 8798 → 8797 → 8796 → 8795
@@ -40,19 +24,10 @@ The plugin opens a fixed local port so wallpapers never need to know DSH's rando
 
 Change the base with the plugin's `wallpaperPort` config; `0` disables the helper.
 
-## `_experiments/`
+## No Lively? Use a browser
 
-Dead ends kept for the record — do not ship these:
+`http://127.0.0.1:8799/` is the same page; `msedge --app=http://127.0.0.1:8799/` gives a chromeless
+window.
 
-| File | What it was |
-|---|---|
-| `index.html` | full page + `<base>`, `-webkit-line-clamp` stripped (still crashed WE) |
-| `full.html` | full page + minimal CSS (still crashed) |
-| `debug.html` | above + an on-screen diagnostics overlay |
-| `lite.html` | standalone canvas renderer, no DOM (works in WE, but only rings) |
-| `img-wallpaper.html` | single full-page screenshot wallpaper (predecessor of `live.html`) |
-
-`howto.html` is the source of `assets/howto.png` (the import guide image).
-
----
-
+> A Wallpaper Engine screenshot route used to exist and has been removed: WE's own renderer cannot
+> render this page, so it only ever approximated it at ~5 fps without interaction — not worth keeping.

@@ -102,7 +102,7 @@ can be forced per page with `?lang=en` / `?lang=zh`.
 
 ## 8. As a desktop wallpaper
 
-Two routes. **Lively is recommended** — it renders the page natively at full frame rate.
+**Lively** is all you need — it renders the page natively at the display frame rate.
 
 ### Lively Wallpaper (full frame rate, interactive)
 
@@ -117,19 +117,7 @@ retries every 5 seconds.
 pickers and detail cards work directly on the background. If that makes desktop icons hard to click,
 turn off icon display in Lively's settings.
 
-### Wallpaper Engine (screenshot mode, ~5 fps)
-
-Wallpaper Engine's own renderer crashes on this page (reproduced on its Chrome 146, independent of
-protocol). The workaround is a screenshot pipeline:
-
-```powershell
-node wallpaper-live.cjs 200 78     # ≈4.9 fps, 200 KB/frame
-```
-
-Then set `wallpaper/live.html` as a Wallpaper Engine web wallpaper. A low-CPU variant (`node
-wallpaper-capture.cjs 8`) refreshes every 8 seconds instead.
-
-Full route comparison and the port fallback: [`wallpaper/README.en.md`](wallpaper/README.en.md).
+Port fallback (8799 → 8795) is documented in [`wallpaper/README.en.md`](wallpaper/README.en.md).
 
 ![Event log](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-log.png)
 

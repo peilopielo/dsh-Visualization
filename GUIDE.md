@@ -83,7 +83,7 @@ npm i dsh-visualization
 
 ## 8. 当桌面壁纸用
 
-两条路，**推荐 Lively**——它用原生内核满帧渲染。
+只需要 **Lively**——它用原生内核满帧渲染。
 
 ### Lively（满帧、可交互）
 
@@ -96,17 +96,7 @@ npm i dsh-visualization
 **桌面上可以直接操作面板**——Lively 会转发鼠标事件，环开关、轮次选择、详情卡都能在桌面上点。
 如果这样导致桌面图标不好点，在 Lively 设置里关掉图标显示。
 
-### Wallpaper Engine（截图模式，约 5 fps）
-
-WE 自己的渲染器跑不动这个页面（在它的 Chrome 146 上复现，与协议无关）。替代方案是截图流水线：
-
-```powershell
-node wallpaper-live.cjs 200 78     # ≈4.9 fps，每帧 200 KB
-```
-
-然后把 `wallpaper/live.html` 设为 WE 的网页壁纸。低 CPU 版用 `node wallpaper-capture.cjs 8`（8 秒一帧）。
-
-三种壁纸的完整对比和端口回退规则见 [`wallpaper/README.md`](wallpaper/README.md)。
+端口回退规则（8799 → 8795）见 [`wallpaper/README.md`](wallpaper/README.md)。
 
 ![事件表](https://raw.githubusercontent.com/peilopielo/dsh-Visualization/main/assets/part-log.png)
 

@@ -26,8 +26,7 @@ npm i dsh-visualization
 2. 下载本仓库的 [`wallpaper/lively-package.zip`](wallpaper/lively-package.zip)
 3. 把 zip 拖进 Lively
 
-> **不推荐 Wallpaper Engine**：它的渲染器跑不动这个页面（在它的 Chrome 146 上复现，与协议和样式表
-> 都无关）。截图方案记录在 [wallpaper/README.md](wallpaper/README.md)，但只有约 5 fps。
+> 只支持 Lively：其它壁纸软件（例如 Wallpaper Engine）的渲染内核跑不动这个页面，没有可用方案。
 
 详细说明：[GUIDE.md §8](GUIDE.md#8-当桌面壁纸用)。
 

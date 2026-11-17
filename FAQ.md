@@ -42,5 +42,5 @@
   约 10 万事件时 `result()` 仍要重排 1.2k 步 / 1.5k 工具，大约 10~20 ms。
 - **只有中英两门界面语言**。
 - **只读**：仪表盘从不写会话文件。
-- **Wallpaper Engine 跑不动这个页面**——它的 CEF 会崩；用 Lively
+- **壁纸只支持 Lively**——其它壁纸宿主（如 Wallpaper Engine）的渲染内核跑不动这个页面
   （见 [GUIDE.md §8](GUIDE.md#8-当桌面壁纸用)）。

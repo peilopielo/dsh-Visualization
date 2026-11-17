@@ -1,7 +1,7 @@
 {
   "name": "dsh-visualization",
-  "version": "0.1.34",
-  "description": "DSH Visualization — a session instrument: rings, turns, tools and background jobs of a live DeepSeek Harness session.",
+  "version": "0.1.35",
+  "description": "Seven-ring session instrument for DeepSeek Harness: turn timeline, per-step ladders, jobs, approvals, changes, subagents and agent teams. Lively desktop wallpaper included.",
   "type": "module",
   "main": "index.js",
   "exports": {
@@ -31,10 +31,6 @@
     "GUIDE.md",
     "AGENTS.md",
     "screenshots.json",
-    "wallpaper/live.html",
-    "wallpaper/hybrid.html",
-    "wallpaper/project.json",
-    "wallpaper/preview.jpg",
     "wallpaper/lively",
     "wallpaper/lively-package.zip",
     "wallpaper/README.md",
