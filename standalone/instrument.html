@@ -1856,7 +1856,7 @@ body.compact .dash{grid-template-columns:1fr}
             X.fillStyle = RING_COL[s3];
             X.textAlign = 'center';
             X.globalAlpha = 0.85;
-            X.fillText(String(RING_NAME[s3] || '').replace(/^[①-⑦]s*/, ''), 0, 0);
+            X.fillText(tr(RING_NAME[s3] || ''), 0, 0);
             X.restore();
           }
         }
@@ -1890,9 +1890,7 @@ body.compact .dash{grid-template-columns:1fr}
       (M.sAppr || []).length + ' 次',
       (M.sChg || []).length + ' 处'
     ];
-    var names = LANG === 'en'
-      ? ['① Session', '② Steps', '③ Skills', '④ Tools', '⑤ Jobs', '⑥ Approvals', '⑦ Changes']
-      : ['① 会话', '② 步骤', '③ 技能', '④ 工具', '⑤ 任务', '⑥ 审批', '⑦ 变更'];
+    var names = RING_NAME.map(function (x) { return tr(x) });
     var cols = RING_COL;
     X.font = Math.round(10 * FS) + 'px ui-monospace,Consolas,monospace';
     X.textAlign = 'center'; X.textBaseline = 'alphabetic';
@@ -1901,7 +1899,7 @@ body.compact .dash{grid-template-columns:1fr}
       X.fillStyle = rgba(cols[i], 0.55);
       X.fillText(names[i], ox, oy - R[i] - 17);
       X.fillStyle = rgba(cols[i], 0.95);
-      X.fillText(cnt[i], ox, oy - R[i] - 5);
+      X.fillText(tr(cnt[i]), ox, oy - R[i] - 5);
     }
   }
 
@@ -2033,9 +2031,10 @@ body.compact .dash{grid-template-columns:1fr}
 
   var langBtn = $('langBtn');
   if (langBtn) {
-    langBtn.textContent = LANG_LABEL[LANG] + ' / ' + LANG_LABEL[LANGS[(LANGS.indexOf(LANG) + 1) % LANGS.length]];
+    langBtn.textContent = '语言：' + LANG_LABEL[LANG];
     langBtn.addEventListener('click', function () {
       try { localStorage.setItem('dshviz.lang', LANGS[(LANGS.indexOf(LANG) + 1) % LANGS.length]) } catch (e) { }
+      langBtn.textContent = '语言：' + LANG_LABEL[LANGS[(LANGS.indexOf(LANG) + 1) % LANGS.length]];
       location.reload();
     });
   }
@@ -2237,7 +2236,7 @@ body.compact .dash{grid-template-columns:1fr}
       try {
         var a = document.createElement('a');
         a.download = 'dsh-visualization.png';
-        a.href = X.canvas.toDataURL('image/png');
+        a.href = net.toDataURL('image/png');
         a.click();
       } catch (e) { expPng.textContent = '导出失败'; }
     });

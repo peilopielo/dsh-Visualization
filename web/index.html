@@ -355,6 +355,7 @@ window.__I18N.en = {
     [/^多会话 · 锁定$/, 'multi-session · locked'],
     [/^⚑ (\d+) 个会话同时活动 · 已锁定当前（不再跳）$/, '$1 sessions live · holding current (no jump)'],
     [/^(\d+) 人 · 待办 (\d+) \/ 进行 (\d+) \/ 完成 (\d+)$/, '$1 members · pending $2 / active $3 / done $4'],
+    [/^语言：(.+)$/, 'language: $1'],
   ],
   fn: [
     [/^连线轮数：(.+) \/ 共 (\d+) 轮$/, function (m) {
@@ -442,6 +443,7 @@ window.__I18N.ja = {
     [/^多会话 · 锁定$/, '複数セッション · 固定'],
     [/^⚑ (\d+) 个会话同时活动 · 已锁定当前（不再跳）$/, '$1 セッション同時稼働 · 現在を固定（切り替えない）'],
     [/^(\d+) 人 · 待办 (\d+) \/ 进行 (\d+) \/ 完成 (\d+)$/, '$1 名 · 待ち $2 / 実行 $3 / 完了 $4'],
+    [/^语言：(.+)$/, '言語：$1'],
   ],
   fn: [
     [/^连线轮数：(.+) \/ 共 (\d+) 轮$/, function (m) {
@@ -529,6 +531,7 @@ window.__I18N.ko = {
     [/^多会话 · 锁定$/, '다중 세션 · 고정'],
     [/^⚑ (\d+) 个会话同时活动 · 已锁定当前（不再跳）$/, '$1개 세션 동시 활동 · 현재 고정(전환 안 함)'],
     [/^(\d+) 人 · 待办 (\d+) \/ 进行 (\d+) \/ 完成 (\d+)$/, '$1명 · 대기 $2 / 진행 $3 / 완료 $4'],
+    [/^语言：(.+)$/, '언어: $1'],
   ],
   fn: [
     [/^连线轮数：(.+) \/ 共 (\d+) 轮$/, function (m) {
@@ -616,6 +619,7 @@ window.__I18N.ru = {
     [/^多会话 · 锁定$/, 'несколько сессий · фикс'],
     [/^⚑ (\d+) 个会话同时活动 · 已锁定当前（不再跳）$/, '$1 сессий активны · держим текущую (без переключения)'],
     [/^(\d+) 人 · 待办 (\d+) \/ 进行 (\d+) \/ 完成 (\d+)$/, '$1 чел. · ожидает $2 / идёт $3 / готово $4'],
+    [/^语言：(.+)$/, 'язык: $1'],
   ],
   fn: [
     [/^连线轮数：(.+) \/ 共 (\d+) 轮$/, function (m) {
@@ -703,6 +707,7 @@ window.__I18N.hi = {
     [/^多会话 · 锁定$/, 'कई सत्र · स्थिर'],
     [/^⚑ (\d+) 个会话同时活动 · 已锁定当前（不再跳）$/, '$1 सत्र सक्रिय · वर्तमान पर टिका (नहीं बदलेगा)'],
     [/^(\d+) 人 · 待办 (\d+) \/ 进行 (\d+) \/ 完成 (\d+)$/, '$1 सदस्य · लंबित $2 / जारी $3 / पूर्ण $4'],
+    [/^语言：(.+)$/, 'भाषा: $1'],
   ],
   fn: [
     [/^连线轮数：(.+) \/ 共 (\d+) 轮$/, function (m) {
@@ -2289,7 +2294,7 @@ window.__I18N.hi = {
             X.fillStyle = RING_COL[s3];
             X.textAlign = 'center';
             X.globalAlpha = 0.85;
-            X.fillText(String(RING_NAME[s3] || '').replace(/^[①-⑦]s*/, ''), 0, 0);
+            X.fillText(tr(RING_NAME[s3] || ''), 0, 0);
             X.restore();
           }
         }
@@ -2323,9 +2328,7 @@ window.__I18N.hi = {
       (M.sAppr || []).length + ' 次',
       (M.sChg || []).length + ' 处'
     ];
-    var names = LANG === 'en'
-      ? ['① Session', '② Steps', '③ Skills', '④ Tools', '⑤ Jobs', '⑥ Approvals', '⑦ Changes']
-      : ['① 会话', '② 步骤', '③ 技能', '④ 工具', '⑤ 任务', '⑥ 审批', '⑦ 变更'];
+    var names = RING_NAME.map(function (x) { return tr(x) });
     var cols = RING_COL;
     X.font = Math.round(10 * FS) + 'px ui-monospace,Consolas,monospace';
     X.textAlign = 'center'; X.textBaseline = 'alphabetic';
@@ -2334,7 +2337,7 @@ window.__I18N.hi = {
       X.fillStyle = rgba(cols[i], 0.55);
       X.fillText(names[i], ox, oy - R[i] - 17);
       X.fillStyle = rgba(cols[i], 0.95);
-      X.fillText(cnt[i], ox, oy - R[i] - 5);
+      X.fillText(tr(cnt[i]), ox, oy - R[i] - 5);
     }
   }
 
@@ -2466,9 +2469,10 @@ window.__I18N.hi = {
 
   var langBtn = $('langBtn');
   if (langBtn) {
-    langBtn.textContent = LANG_LABEL[LANG] + ' / ' + LANG_LABEL[LANGS[(LANGS.indexOf(LANG) + 1) % LANGS.length]];
+    langBtn.textContent = '语言：' + LANG_LABEL[LANG];
     langBtn.addEventListener('click', function () {
       try { localStorage.setItem('dshviz.lang', LANGS[(LANGS.indexOf(LANG) + 1) % LANGS.length]) } catch (e) { }
+      langBtn.textContent = '语言：' + LANG_LABEL[LANGS[(LANGS.indexOf(LANG) + 1) % LANGS.length]];
       location.reload();
     });
   }
@@ -2670,7 +2674,7 @@ window.__I18N.hi = {
       try {
         var a = document.createElement('a');
         a.download = 'dsh-visualization.png';
-        a.href = X.canvas.toDataURL('image/png');
+        a.href = net.toDataURL('image/png');
         a.click();
       } catch (e) { expPng.textContent = '导出失败'; }
     });

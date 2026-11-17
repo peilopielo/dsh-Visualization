@@ -72,6 +72,7 @@ window.__I18N.en = {
     [/^多会话 · 锁定$/, 'multi-session · locked'],
     [/^⚑ (\d+) 个会话同时活动 · 已锁定当前（不再跳）$/, '$1 sessions live · holding current (no jump)'],
     [/^(\d+) 人 · 待办 (\d+) \/ 进行 (\d+) \/ 完成 (\d+)$/, '$1 members · pending $2 / active $3 / done $4'],
+    [/^语言：(.+)$/, 'language: $1'],
   ],
   fn: [
     [/^连线轮数：(.+) \/ 共 (\d+) 轮$/, function (m) {
