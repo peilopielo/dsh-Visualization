@@ -17,6 +17,11 @@ npm i dsh-visualization
 
 装好后左侧栏出现环图标，点开就是面板。
 
+## 界面
+
+六种语言（中 / EN / 日 / 한 / РУ / हि）、七环可单独开关、字号与紧凑布局可调、`Space` 重播 `1-7` 切环。
+设置存在宿主侧，面板与壁纸共用。
+
 ## 想当桌面壁纸用？
 
 **需要先装 [Lively Wallpaper](https://github.com/rocksdanister/lively)**（免费开源）。它用原生内核

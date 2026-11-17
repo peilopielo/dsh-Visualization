@@ -20,6 +20,12 @@ npm i dsh-visualization
 
 A ring icon appears in the left rail — click it to open the panel.
 
+## Interface
+
+Six languages (中 / EN / 日 / 한 / РУ / हि), each of the seven rings can be toggled, text size and a compact
+layout are adjustable, `Space` replays and `1-7` toggle rings. Settings live on the host, so the panel and
+the wallpaper share them.
+
 ## Want it as a desktop wallpaper?
 
 **You need [Lively Wallpaper](https://github.com/rocksdanister/lively)** (free, open source). It renders

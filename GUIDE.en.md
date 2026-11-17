@@ -74,7 +74,7 @@ themselves to fill the gap.
 | `line turns` | how many turns get connectors |
 | `show turns` | how many turns the whole panel covers (or `all`) |
 | `⧉ window` | open a separate window you can drag to another monitor |
-| `中 / EN` | switch language |
+| language `[select]` | six interface languages |
 
 `line turns` is always clamped to `show turns` — a connector can never point at a turn the panel is
 not showing.
@@ -97,8 +97,25 @@ Every node on every ring answers:
 
 ## 7. Language
 
-The UI ships in Chinese and English. It starts from `navigator.language`, remembers your choice, and
-can be forced per page with `?lang=en` / `?lang=zh`.
+The select at the bottom right of the control bar offers **six languages**: 中文 / English / 日本語 /
+한국어 / Русский / हिन्दी.
+
+- It follows the browser language by default; your choice is stored in `localStorage` (the panel and
+  the wallpaper remember their own).
+- `?lang=ja` and friends override the saved choice for one visit.
+- **Translated**: UI strings, buttons, table headers, ring labels, templated count lines ("running 1 · total 8").
+- **Not translated**: tool names, session ids, DSH's own field names (`assistant`, `TURN`), and any new
+  string a language pack has not covered yet — those fall back to Chinese.
+
+## 7.1 Keyboard
+
+| Key | Action |
+|---|---|
+| `Space` / `R` | replay / pause |
+| `1`–`7` | toggle that ring |
+| `Esc` | close the detail card |
+
+Keys are ignored while you type in an input.
 
 ## 8. As a desktop wallpaper
 
