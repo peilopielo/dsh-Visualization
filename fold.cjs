@@ -124,7 +124,20 @@ function logFileOf(dirPath) {
   return best ? path.join(dirPath, best) : path.join(dirPath, 'session.v4.jsonl.zstd')
 }
 
+let LIST_CACHE = { at: 0, all: null }
+const LIST_TTL = 2000
+
 function listSessions(limit) {
+  const now = Date.now()
+  if (LIST_CACHE.all && now - LIST_CACHE.at < LIST_TTL) {
+    return limit ? LIST_CACHE.all.slice(0, limit) : LIST_CACHE.all.slice()
+  }
+  const all = listSessionsRaw(0)
+  LIST_CACHE = { at: now, all: all }
+  return limit ? all.slice(0, limit) : all.slice()
+}
+
+function listSessionsRaw(limit) {
   const out = []
   let dirs = []
   try { dirs = fs.readdirSync(SESSIONS_ROOT) } catch (e) { return out }
@@ -577,6 +590,18 @@ function makeFolder() {
       default: break
     }
   }
+  /* 每个事件单独兜住：一个事件解析失败不该让整份状态静默变空 */
+  const pushSafe = function (e) {
+    try {
+      push(e)
+    } catch (err) {
+      S.warn = S.warn || { count: 0, last: '', lastType: '' }
+      S.warn.count++
+      S.warn.last = String((err && err.message) || err).slice(0, 160)
+      S.warn.lastType = String((e && e.type) || '?')
+    }
+  }
+
   /* 输出：字段照旧，但不在累加器上做破坏性删除 —— 这样同一个折叠器可以一直 push 下去 */
   const result = function () {
     const out = {}
@@ -593,7 +618,7 @@ function makeFolder() {
     return out
   }
 
-  return { push: push, result: result }
+  return { push: pushSafe, result: result }
 }
 
 /* 全量折叠（重放、测试用）；线上走增量 */
@@ -887,7 +912,19 @@ function childStats(entry) {
   return data
 }
 
+const CHILDREN_TTL = 1500
+const CHILDREN_AT = new Map()
+
 function childrenOf(parentId) {
+  const now = Date.now()
+  const hit = CHILDREN_AT.get(parentId)
+  if (hit && now - hit.at < CHILDREN_TTL) return hit.data
+  const data = childrenOfUncached(parentId)
+  CHILDREN_AT.set(parentId, { at: now, data: data })
+  return data
+}
+
+function childrenOfUncached(parentId) {
   return childSessionsOf(parentId).map(childStats).filter(Boolean)
 }
 
@@ -1184,6 +1221,6 @@ function handle(req, res) {
 }
 
 module.exports = {
-  handle, listSessions, pickSession, refresh, fold, makeFolder, childrenOf, followInfo, noteViewed,
+  handle, listSessions, pickSession, refresh, fold, makeFolder, childrenOf, followInfo, noteViewed, zstdFrames, unzstdAll,
   setOrigin, setPolicy, startHelper, helperPort, hasZstd: HAS_ZSTD,
 }
