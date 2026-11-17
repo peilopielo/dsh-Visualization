@@ -2508,6 +2508,27 @@ body.compact .dash{grid-template-columns:1fr}
     });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && detEl) detEl.classList.remove('on');
+
+      /* 快捷键：在输入框里打字时不抢键 */
+      var tag = (e.target && e.target.tagName) || '';
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag) || (e.target && e.target.isContentEditable)) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      var k = e.key;
+      if (k === ' ' || k === 'Spacebar') {
+        var rp = document.getElementById('rpPlay');
+        if (rp) { e.preventDefault(); rp.click() }
+        return;
+      }
+      if (k === 'r' || k === 'R') {
+        var rp2 = document.getElementById('rpPlay');
+        if (rp2) rp2.click();
+        return;
+      }
+      if (k >= '1' && k <= '7') {
+        var chip = document.querySelector('#ringToggles [data-ring="' + (Number(k) - 1) + '"]');
+        if (chip) { e.preventDefault(); chip.click() }
+      }
     });
   }
 
