@@ -986,7 +986,7 @@ body.compact .dash{grid-template-columns:1fr}
     }
     $('lkSrc').textContent = M.ok
       ? '数据源：' + (M.session.id || '?').replace('session-', 'session-').slice(0, 20) + '… · ' + fmt(M.bridge.bytes) + 'B' +
-        (M.follow && M.follow.locked ? '  · 多会话 · 锁定' : '') +
+        
         (M.warn && M.warn.count ? '  · ⚠ 解析告警 ' + M.warn.count : '')
       : '数据源：未连接';
     if (LANG !== 'zh') setTimeout(translateDom, 0);   /* 英文模式：等这一帧所有赋值完成再换标签 */

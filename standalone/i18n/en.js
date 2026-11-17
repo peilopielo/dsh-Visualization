@@ -47,6 +47,8 @@ window.__I18N.en = {
     '⑤ 任务': '⑤ Jobs', '⑥ 审批': '⑥ Approvals', '⑦ 变更': '⑦ Changes',
     '▶ 重播': '▶ replay', '回到实时': 'back to live', '按轮分组 · 新在最上': 'grouped by turn · newest first',
 
+    '视图': 'view', '范围': 'scope', '智能体': 'agents', '回放': 'replay',
+    '语言': 'language',
   },
   rules: [
     [/^轮次 \/ (\d+)$/, 'Turns / $1'],
