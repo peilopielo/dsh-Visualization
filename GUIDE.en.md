@@ -184,3 +184,15 @@ them off). The table above always lists every subagent regardless of that settin
 
 The panel finds them by reading `parentSession` from each sub-session's first event, so it only lists
 the agents this session actually spawned. Up to 12 in the table, 4 circles. No subagents → nothing shows.
+
+**Settings drawer** (the **⚙ settings** chip on the control bar):
+
+| Item | Effect |
+|---|---|
+| text size | compact / standard / large — scales both the tables and the canvas labels |
+| layout | standard / compact (hides the right column so the rings use the full width) |
+| export | save PNG (the current rings view) / save JSON (the complete state) |
+
+Both choices persist on the host side together with the other display prefs
+(`~/.dsh/dsh-visualization-prefs.json`), shared by the panel and the wallpaper.
+
