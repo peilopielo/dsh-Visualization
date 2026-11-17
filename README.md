@@ -1,4 +1,4 @@
-**[中文](README.md)** | [English](README.en.md)
+**中文** | [English](README.en.md) | [日本語](README.ja.md) | [한국어](README.ko.md) | [Русский](README.ru.md) | [हिन्दी](README.hi.md)
 
 # dsh-visualization
 

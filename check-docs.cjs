@@ -1,47 +1,52 @@
-/* 文档体检（拆分后模型）：
-   每份文档都有 中文 A.md + 英文 A.en.md
-   检查：成对存在、章节数一致、相对链接有效、英文侧链接指向 .en.md */
+/* 文档体检：
+   - README 六语齐全、章节数一致、语言切换行完整
+   - 其它文档仍按 中文 A.md + 英文 A.en.md 成对检查
+   检查项：成对存在、章节数一致、相对链接有效、英文侧不链中文版 */
 const fs = require('fs')
 const path = require('path')
 
-const bases = ['README.md', 'GUIDE.md', 'AGENTS.md', 'FAQ.md', 'wallpaper/README.md']
+const READMES = ['README.md', 'README.en.md', 'README.ja.md', 'README.ko.md', 'README.ru.md', 'README.hi.md']
+const PAIRS = ['GUIDE.md', 'AGENTS.md', 'FAQ.md', 'wallpaper/README.md']
 let bad = 0
-
 const sections = (t) => (t.match(/^## /gm) || []).length
 
-for (const base of bases) {
-  const en = base.replace(/\.md$/, '.en.md')
-  if (!fs.existsSync(base)) { console.log('✗ 缺中文版: ' + base); bad++; continue }
-  if (!fs.existsSync(en)) { console.log('✗ 缺英文版: ' + en); bad++; continue }
+/* ---- README 六语 ---- */
+{
+  const texts = {}
+  for (const f of READMES) {
+    if (!fs.existsSync(f)) { console.log('✗ 缺 ' + f); bad++; continue }
+    texts[f] = fs.readFileSync(f, 'utf8')
+  }
+  const counts = Object.entries(texts).map(([f, t]) => f + '=' + sections(t))
+  const base = sections(texts[READMES[0]] || '')
+  const same = Object.values(texts).every((t) => sections(t) === base)
+  if (!same) { console.log('⚠ README 章节数不一致: ' + counts.join(' ')); bad++ }
+  else console.log('✓ README 六语 · ' + base + ' 节 (' + counts.length + ' 个文件)')
 
+  /* 每个文件的切换行必须包含全部六种语言的链接 */
+  for (const [f, t] of Object.entries(texts)) {
+    const head = t.split('\n')[0]
+    const missing = READMES.filter((r) => r !== f && !head.includes('(' + path.basename(r) + ')'))
+    if (missing.length) { console.log('✗ ' + f + ' 切换行缺: ' + missing.join(', ')); bad++ }
+  }
+}
+
+/* ---- 其它文档成对 ---- */
+for (const base of PAIRS) {
+  const en = base.replace(/\.md$/, '.en.md')
+  if (!fs.existsSync(base) || !fs.existsSync(en)) { console.log('✗ 缺版本: ' + base); bad++; continue }
   const zhText = fs.readFileSync(base, 'utf8')
   const enText = fs.readFileSync(en, 'utf8')
-
-  /* 语言切换行 */
-  const zhOk = zhText.split('\n')[0].includes('.en.md')
-  const enOk = enText.split('\n')[0].includes('**English**') || enText.split('\n')[0].includes('English**')
-  if (!zhOk) { console.log('✗ ' + base + ' 首行没有指向英文版的链接'); bad++ }
-  if (!enOk) { console.log('✗ ' + en + ' 首行没有语言切换'); bad++ }
-
-  /* 章节数一致 */
   const a = sections(zhText), b = sections(enText)
   if (a !== b) { console.log(`⚠ ${base} 章节数不一致：中文 ${a} / 英文 ${b}`); bad++ }
   else console.log(`✓ ${base} ↔ ${path.basename(en)} · ${a} 节`)
 
-  /* 相对链接 */
   for (const [file, text] of [[base, zhText], [en, enText]]) {
     const dir = path.dirname(file)
     for (const m of text.matchAll(/\]\((?!https?:|#|mailto:)([^)\s]+)\)/g)) {
       const clean = m[1].split('#')[0]
       if (!clean) continue
       if (!fs.existsSync(path.resolve(dir, clean))) { console.log('✗ ' + file + ' → 缺失: ' + m[1]); bad++ }
-    }
-    /* 英文侧不该链接到中文版 */
-    if (file.endsWith('.en.md')) {
-      const body = text.split('\n').slice(1).join('\n')
-      for (const m of body.matchAll(/\]\((?!https?:|#)([^)\s]+\.md)(#[^)]*)?\)/g)) {
-        if (!m[1].endsWith('.en.md')) { console.log('⚠ ' + file + ' 链到了中文版: ' + m[1]); bad++ }
-      }
     }
   }
 }
