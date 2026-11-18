@@ -49,6 +49,7 @@ window.__I18N.en = {
 
     '视图': 'view', '范围': 'scope', '智能体': 'agents', '回放': 'replay',
     '语言': 'language',
+    '主题': 'theme', '深色': 'dark', '浅色': 'light',
   },
   rules: [
     [/^轮次 \/ (\d+)$/, 'Turns / $1'],

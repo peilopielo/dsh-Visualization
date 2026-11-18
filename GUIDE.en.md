@@ -180,6 +180,7 @@ Click **⚙ settings** to open the drawer:
 
 | Item | Effect |
 |---|---|
+| theme | dark / light (light inverts the page; ring hues are preserved) |
 | text size | compact / standard / large — scales both tables and canvas labels |
 | layout | standard / compact (hides the right column so the rings use the full width) |
 | export | save PNG (current rings view) / save JSON (complete state) |

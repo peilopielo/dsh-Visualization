@@ -11,6 +11,11 @@
   --session:#e6edfa; --user:#8fe0c8; --tool:#ffc46b; --task:#f0a6c6;
   --skill:#b28cff; --state:#8a919d; --ok:#8fe0c8; --bad:#ff8a6b;
 }
+  /* 浅色主题：整页反色 + 色相回转。
+     页面里大量颜色是写死的亮灰，逐条覆盖容易漏，反色一次解决；
+     hue-rotate(180deg) 把色相转回来，环的青/琥珀/粉依然成立。 */
+  html[data-theme="light"] body{filter:invert(1) hue-rotate(180deg)}
+  html[data-theme="light"] #net{filter:invert(1) hue-rotate(180deg) saturate(1.6) brightness(1.18)}
 *{box-sizing:border-box;margin:0}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
   font:11px/1.45 ui-monospace,"Cascadia Mono",Consolas,monospace;cursor:default}
@@ -220,6 +225,8 @@ body.compact .dash{grid-template-columns:1fr}
         font:10px/1.9 ui-monospace,Consolas,monospace;color:var(--mid)">
         <div><b style="color:var(--ink)">字号</b>
           <b class="chip" data-fs="0.88">紧凑</b><b class="chip" data-fs="1">标准</b><b class="chip" data-fs="1.15">大字</b></div>
+        <div><b style="color:var(--ink)">主题</b>
+          <b class="chip" data-theme="dark">深色</b><b class="chip" data-theme="light">浅色</b></div>
         <div><b style="color:var(--ink)">布局</b>
           <b class="chip" data-lay="wide">标准</b><b class="chip" data-lay="compact">紧凑（隐藏右栏）</b></div>
         <div><b style="color:var(--ink)">导出</b>
@@ -359,6 +366,7 @@ window.__I18N.en = {
 
     '视图': 'view', '范围': 'scope', '智能体': 'agents', '回放': 'replay',
     '语言': 'language',
+    '主题': 'theme', '深色': 'dark', '浅色': 'light',
   },
   rules: [
     [/^轮次 \/ (\d+)$/, 'Turns / $1'],
@@ -450,6 +458,7 @@ window.__I18N.ja = {
     '▶ 重播': '▶ リプレイ', '回到实时': 'ライブに戻る', '按轮分组 · 新在最上': 'ターン別 · 新しい順',
     '视图': '表示', '范围': '範囲', '智能体': 'エージェント', '回放': '再生',
     '语言': '言語',
+    '主题': 'テーマ', '深色': 'ダーク', '浅色': 'ライト',
   },
   rules: [
     [/^轮次 \/ (\d+)$/, 'ターン / $1'],
@@ -540,6 +549,7 @@ window.__I18N.ko = {
     '▶ 重播': '▶ 재생', '回到实时': '실시간으로', '按轮分组 · 新在最上': '턴별 · 최신 위',
     '视图': '보기', '范围': '범위', '智能体': '에이전트', '回放': '재생',
     '语言': '언어',
+    '主题': '테마', '深色': '어둡게', '浅色': '밝게',
   },
   rules: [
     [/^轮次 \/ (\d+)$/, '턴 / $1'],
@@ -630,6 +640,7 @@ window.__I18N.ru = {
     '▶ 重播': '▶ повтор', '回到实时': 'к live', '按轮分组 · 新在最上': 'по ходам · новые сверху',
     '视图': 'вид', '范围': 'диапазон', '智能体': 'агенты', '回放': 'повтор',
     '语言': 'язык',
+    '主题': 'тема', '深色': 'тёмная', '浅色': 'светлая',
   },
   rules: [
     [/^轮次 \/ (\d+)$/, 'Ходы / $1'],
@@ -720,6 +731,7 @@ window.__I18N.hi = {
     '▶ 重播': '▶ रीप्ले', '回到实时': 'लाइव पर', '按轮分组 · 新在最上': 'टर्न से · नए ऊपर',
     '视图': 'दृश्य', '范围': 'सीमा', '智能体': 'एजेंट', '回放': 'रीप्ले',
     '语言': 'भाषा',
+    '主题': 'थीम', '深色': 'गहरा', '浅色': 'हल्का',
   },
   rules: [
     [/^轮次 \/ (\d+)$/, 'टर्न / $1'],
@@ -941,6 +953,7 @@ window.__I18N.hi = {
       subs: SUBC.n,
       teamN: TEAMC.n,
       fs: FS,
+      theme: document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark',
       lay: document.body.classList.contains('compact') ? 'compact' : 'wide',
       filter: FILTER.log, fj: FILTER.jobs, ft: FILTER.tools
     };
@@ -993,6 +1006,7 @@ window.__I18N.hi = {
     if (typeof s.subs === 'number' && SUBC.opts.indexOf(s.subs) >= 0) SUBC.n = s.subs;
     if (typeof s.teamN === 'number' && TEAMC.opts.indexOf(s.teamN) >= 0) TEAMC.n = s.teamN;
     if (typeof s.fs === 'number' && s.fs > 0.5 && s.fs < 2) applyFs(s.fs);
+    applyTheme(s.theme === 'light' ? 'light' : 'dark');
     applyLayout(s.lay === 'compact' ? 'compact' : 'wide');
     if (s.filter) FILTER.log = s.filter;
     if (s.fj) FILTER.jobs = s.fj;
@@ -2675,6 +2689,18 @@ window.__I18N.hi = {
     }
     render();
   }
+  function applyTheme(mode) {
+    var m = mode === 'light' ? 'light' : 'dark';
+    if (m === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    else document.documentElement.removeAttribute('data-theme');
+    var bs = cfgPanel ? cfgPanel.querySelectorAll('[data-theme]') : [];
+    for (var i = 0; i < bs.length; i++) {
+      var on = bs[i].getAttribute('data-theme') === m;
+      bs[i].style.color = on ? 'var(--ink)' : 'var(--dim)';
+      bs[i].style.borderColor = on ? 'rgba(190,200,215,.55)' : 'rgba(190,200,215,.18)';
+    }
+    try { draw(); } catch (e) { }
+  }
   function applyLayout(mode) {
     document.body.classList.toggle('compact', mode === 'compact');
     var bs = cfgPanel ? cfgPanel.querySelectorAll('[data-lay]') : [];
@@ -2706,6 +2732,8 @@ window.__I18N.hi = {
       if (fs2 != null) { applyFs(Number(fs2)); savePrefs(); return }
       var lay = el.getAttribute('data-lay');
       if (lay) { applyLayout(lay); savePrefs(); return }
+      var th = el.getAttribute('data-theme');
+      if (th) { applyTheme(th); savePrefs(); return }
     });
     var expPng = $('expPng');
     if (expPng) expPng.addEventListener('click', function () {
