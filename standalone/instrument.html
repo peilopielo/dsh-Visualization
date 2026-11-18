@@ -226,7 +226,7 @@ body.compact .dash{grid-template-columns:1fr}
         <div><b style="color:var(--ink)">字号</b>
           <b class="chip" data-fs="0.88">紧凑</b><b class="chip" data-fs="1">标准</b><b class="chip" data-fs="1.15">大字</b></div>
         <div><b style="color:var(--ink)">主题</b>
-          <b class="chip" data-theme="dark">深色</b><b class="chip" data-theme="light">浅色</b></div>
+          <b class="chip" data-theme="auto">跟随 DSH</b><b class="chip" data-theme="dark">深色</b><b class="chip" data-theme="light">浅色</b></div>
         <div><b style="color:var(--ink)">布局</b>
           <b class="chip" data-lay="wide">标准</b><b class="chip" data-lay="compact">紧凑（隐藏右栏）</b></div>
         <div><b style="color:var(--ink)">导出</b>
@@ -500,7 +500,7 @@ body.compact .dash{grid-template-columns:1fr}
       subs: SUBC.n,
       teamN: TEAMC.n,
       fs: FS,
-      theme: document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark',
+      theme: THEME_MODE,
       lay: document.body.classList.contains('compact') ? 'compact' : 'wide',
       filter: FILTER.log, fj: FILTER.jobs, ft: FILTER.tools
     };
@@ -553,7 +553,7 @@ body.compact .dash{grid-template-columns:1fr}
     if (typeof s.subs === 'number' && SUBC.opts.indexOf(s.subs) >= 0) SUBC.n = s.subs;
     if (typeof s.teamN === 'number' && TEAMC.opts.indexOf(s.teamN) >= 0) TEAMC.n = s.teamN;
     if (typeof s.fs === 'number' && s.fs > 0.5 && s.fs < 2) applyFs(s.fs);
-    applyTheme(s.theme === 'light' ? 'light' : 'dark');
+    applyTheme(URL_THEME ? 'auto' : (s.theme === 'light' || s.theme === 'dark' ? s.theme : 'auto'));
     applyLayout(s.lay === 'compact' ? 'compact' : 'wide');
     if (s.filter) FILTER.log = s.filter;
     if (s.fj) FILTER.jobs = s.fj;
@@ -2236,15 +2236,23 @@ body.compact .dash{grid-template-columns:1fr}
     }
     render();
   }
+  var THEME_MODE = 'auto';
+  var URL_THEME = (function () {
+    try {
+      var v = new URLSearchParams(location.search).get('theme') || '';
+      return v === 'light' || v === 'dark' ? v : '';
+    } catch (e) { return '' }
+  })();
   function applyTheme(mode) {
-    var m = mode === 'light' ? 'light' : 'dark';
+    THEME_MODE = (mode === 'light' || mode === 'dark') ? mode : 'auto';
+    if (mode === 'auto') mode = URL_THEME || 'dark';
+      var m = mode === 'light' ? 'light' : 'dark';
     if (m === 'light') document.documentElement.setAttribute('data-theme', 'light');
     else document.documentElement.removeAttribute('data-theme');
     var bs = cfgPanel ? cfgPanel.querySelectorAll('[data-theme]') : [];
     for (var i = 0; i < bs.length; i++) {
-      var on = bs[i].getAttribute('data-theme') === m;
-      bs[i].style.color = on ? 'var(--ink)' : 'var(--dim)';
-      bs[i].style.borderColor = on ? 'rgba(190,200,215,.55)' : 'rgba(190,200,215,.18)';
+      var on = bs[i].getAttribute('data-theme') === THEME_MODE;
+      bs[i].classList.toggle('on', on);
     }
     try { draw(); } catch (e) { }
   }

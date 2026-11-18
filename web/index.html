@@ -226,7 +226,7 @@ body.compact .dash{grid-template-columns:1fr}
         <div><b style="color:var(--ink)">字号</b>
           <b class="chip" data-fs="0.88">紧凑</b><b class="chip" data-fs="1">标准</b><b class="chip" data-fs="1.15">大字</b></div>
         <div><b style="color:var(--ink)">主题</b>
-          <b class="chip" data-theme="dark">深色</b><b class="chip" data-theme="light">浅色</b></div>
+          <b class="chip" data-theme="auto">跟随 DSH</b><b class="chip" data-theme="dark">深色</b><b class="chip" data-theme="light">浅色</b></div>
         <div><b style="color:var(--ink)">布局</b>
           <b class="chip" data-lay="wide">标准</b><b class="chip" data-lay="compact">紧凑（隐藏右栏）</b></div>
         <div><b style="color:var(--ink)">导出</b>
@@ -367,6 +367,7 @@ window.__I18N.en = {
     '视图': 'view', '范围': 'scope', '智能体': 'agents', '回放': 'replay',
     '语言': 'language',
     '主题': 'theme', '深色': 'dark', '浅色': 'light',
+    '跟随 DSH': 'follow DSH',
   },
   rules: [
     [/^轮次 \/ (\d+)$/, 'Turns / $1'],
@@ -459,6 +460,7 @@ window.__I18N.ja = {
     '视图': '表示', '范围': '範囲', '智能体': 'エージェント', '回放': '再生',
     '语言': '言語',
     '主题': 'テーマ', '深色': 'ダーク', '浅色': 'ライト',
+    '跟随 DSH': 'DSH に従う',
   },
   rules: [
     [/^轮次 \/ (\d+)$/, 'ターン / $1'],
@@ -550,6 +552,7 @@ window.__I18N.ko = {
     '视图': '보기', '范围': '범위', '智能体': '에이전트', '回放': '재생',
     '语言': '언어',
     '主题': '테마', '深色': '어둡게', '浅色': '밝게',
+    '跟随 DSH': 'DSH 따름',
   },
   rules: [
     [/^轮次 \/ (\d+)$/, '턴 / $1'],
@@ -641,6 +644,7 @@ window.__I18N.ru = {
     '视图': 'вид', '范围': 'диапазон', '智能体': 'агенты', '回放': 'повтор',
     '语言': 'язык',
     '主题': 'тема', '深色': 'тёмная', '浅色': 'светлая',
+    '跟随 DSH': 'как в DSH',
   },
   rules: [
     [/^轮次 \/ (\d+)$/, 'Ходы / $1'],
@@ -732,6 +736,7 @@ window.__I18N.hi = {
     '视图': 'दृश्य', '范围': 'सीमा', '智能体': 'एजेंट', '回放': 'रीप्ले',
     '语言': 'भाषा',
     '主题': 'थीम', '深色': 'गहरा', '浅色': 'हल्का',
+    '跟随 DSH': 'DSH के अनुसार',
   },
   rules: [
     [/^轮次 \/ (\d+)$/, 'टर्न / $1'],
@@ -953,7 +958,7 @@ window.__I18N.hi = {
       subs: SUBC.n,
       teamN: TEAMC.n,
       fs: FS,
-      theme: document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark',
+      theme: THEME_MODE,
       lay: document.body.classList.contains('compact') ? 'compact' : 'wide',
       filter: FILTER.log, fj: FILTER.jobs, ft: FILTER.tools
     };
@@ -1006,7 +1011,7 @@ window.__I18N.hi = {
     if (typeof s.subs === 'number' && SUBC.opts.indexOf(s.subs) >= 0) SUBC.n = s.subs;
     if (typeof s.teamN === 'number' && TEAMC.opts.indexOf(s.teamN) >= 0) TEAMC.n = s.teamN;
     if (typeof s.fs === 'number' && s.fs > 0.5 && s.fs < 2) applyFs(s.fs);
-    applyTheme(s.theme === 'light' ? 'light' : 'dark');
+    applyTheme(URL_THEME ? 'auto' : (s.theme === 'light' || s.theme === 'dark' ? s.theme : 'auto'));
     applyLayout(s.lay === 'compact' ? 'compact' : 'wide');
     if (s.filter) FILTER.log = s.filter;
     if (s.fj) FILTER.jobs = s.fj;
@@ -2689,15 +2694,23 @@ window.__I18N.hi = {
     }
     render();
   }
+  var THEME_MODE = 'auto';
+  var URL_THEME = (function () {
+    try {
+      var v = new URLSearchParams(location.search).get('theme') || '';
+      return v === 'light' || v === 'dark' ? v : '';
+    } catch (e) { return '' }
+  })();
   function applyTheme(mode) {
-    var m = mode === 'light' ? 'light' : 'dark';
+    THEME_MODE = (mode === 'light' || mode === 'dark') ? mode : 'auto';
+    if (mode === 'auto') mode = URL_THEME || 'dark';
+      var m = mode === 'light' ? 'light' : 'dark';
     if (m === 'light') document.documentElement.setAttribute('data-theme', 'light');
     else document.documentElement.removeAttribute('data-theme');
     var bs = cfgPanel ? cfgPanel.querySelectorAll('[data-theme]') : [];
     for (var i = 0; i < bs.length; i++) {
-      var on = bs[i].getAttribute('data-theme') === m;
-      bs[i].style.color = on ? 'var(--ink)' : 'var(--dim)';
-      bs[i].style.borderColor = on ? 'rgba(190,200,215,.55)' : 'rgba(190,200,215,.18)';
+      var on = bs[i].getAttribute('data-theme') === THEME_MODE;
+      bs[i].classList.toggle('on', on);
     }
     try { draw(); } catch (e) { }
   }

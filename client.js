@@ -37,15 +37,19 @@ window.__ModuleLoader__.load({
     /* 主面板：整块 iframe，仪表盘是独立页面，交互全部在里面 */
     function Panel() {
       const [sid, setSid] = React.useState(sessionFromUrl())
+      const [theme, setTheme] = React.useState((window && window.__DSHVIZ_THEME) || 'dark')
       /* 宿主切会话时地址会变，但 pushState 不触发 popstate —— 轻量轮询兜住 */
       React.useEffect(() => {
         const id = setInterval(() => {
           const next = sessionFromUrl()
           setSid((cur) => (cur === next ? cur : next))
+          const th = (window && window.__DSHVIZ_THEME) || 'dark'
+          setTheme((cur) => (cur === th ? cur : th))
         }, 1000)
         return () => clearInterval(id)
       }, [])
-      const src = sid ? URL + '?session=' + encodeURIComponent(sid) : URL
+      const src = (sid ? URL + '?session=' + encodeURIComponent(sid) : URL + '?')
+        + (sid ? '&' : '') + 'theme=' + theme
       return h('div', {
         style: {
           position: 'relative', display: 'flex', flexDirection: 'column',
@@ -67,6 +71,23 @@ window.__ModuleLoader__.load({
         await new Promise((r) => setTimeout(r, 100))
       }
       return null
+    }
+
+    /* DSH 的外观（浅色/深色）由客户端 theme 服务给出；面板跟着它走。 */
+    function readTheme(ctx) {
+      try {
+        const t = ctx.get('theme')
+        const s = t && t.getTheme ? t.getTheme() : null
+        return s && s.active && s.active.colorScheme === 'light' ? 'light' : 'dark'
+      } catch (e) { return 'dark' }
+    }
+    function watchTheme(ctx) {
+      try { window.__DSHVIZ_THEME = readTheme(ctx) } catch (e) { }
+      try {
+        ctx.on('theme/change', () => {
+          try { window.__DSHVIZ_THEME = readTheme(ctx) } catch (e) { }
+        })
+      } catch (e) { }
     }
 
     /* 全局跟随：DSH 页面地址里通常带着当前会话 uuid。
@@ -137,6 +158,7 @@ window.__ModuleLoader__.load({
     }
 
     async function apply(ctx) {
+      watchTheme(ctx)
       watchViewedSession()
       patchSelectionLater(ctx)
       try {
