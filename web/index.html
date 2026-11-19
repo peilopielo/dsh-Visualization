@@ -2526,10 +2526,10 @@ window.__I18N.hi = {
     /* 从核心射向 ① 会话环的粒子：数量随轮次增长，有上限；alpha 0→1→0 */
     (function () {
       var rEnd = (typeof R !== 'undefined' && R && R[0]) ? R[0] : G.base * 0.24;
-      var rStart = Math.max(6, G.base * 0.055);
+      var rStart = 0;                                      /* 从最中心出发 */
       var travel = 1500;                                   /* 一趟 1.5 秒 */
       var turns = M.turns || M.turn || 0;
-      var count = Math.max(2, Math.min(16, Math.round(turns / 12) || 2));
+      var count = Math.max(4, Math.min(28, Math.round(turns / 6) || 4));
       var now = Date.now();
       X.save();
       for (var pi = 0; pi < count; pi++) {
@@ -2539,18 +2539,12 @@ window.__I18N.hi = {
         var al2 = Math.pow(ph2, 0.75);                      /* 由透明到不透明，抵达时最亮 */
         var px2 = ox + Math.cos(ang2) * rr2;
         var py2 = oy + Math.sin(ang2) * rr2;
-        var sz2 = 1.4 + 0.8 * al2;
+        var sz2 = 1.3 + 1.0 * al2;
         X.beginPath();
         X.arc(px2, py2, sz2, 0, TAU);
-        X.fillStyle = 'rgba(160,255,225,' + (0.75 * al2).toFixed(3) + ')';
-        X.shadowColor = 'rgba(130,255,200,.9)';
-        X.shadowBlur = 6 * al2;
-        X.fill();
-        /* 短拖尾 */
-        X.beginPath();
-        X.arc(ox + Math.cos(ang2) * (rr2 - 7 * al2), oy + Math.sin(ang2) * (rr2 - 7 * al2), sz2 * 0.6, 0, TAU);
-        X.fillStyle = 'rgba(160,255,225,' + (0.28 * al2).toFixed(3) + ')';
-        X.shadowBlur = 0;
+        X.fillStyle = 'rgba(255,255,255,' + (0.85 * al2).toFixed(3) + ')';
+        X.shadowColor = 'rgba(220,240,255,.9)';
+        X.shadowBlur = 5 * al2;
         X.fill();
       }
       X.restore();
