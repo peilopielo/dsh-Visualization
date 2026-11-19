@@ -644,10 +644,17 @@ body.compact .dash{grid-template-columns:1fr}
       if (!j || !j.ok) { M.ok = false; M.state = 'NO DATA'; M.err = (j && j.error) || ''; render(); return }
       M.ok = true; M.err = '';
       M.state = j.state; M.turn = j.turn; M.step = j.step; M.turns = j.turns;
-      M.turnOpen = j.turnOpen; M.ctxPct = j.ctxPct; M.ctxUsed = j.ctxUsed; M.ctxWin = j.ctxWin;
+      var wasOpen = M.turnOpen;
+    M.turnOpen = j.turnOpen; M.ctxPct = j.ctxPct; M.ctxUsed = j.ctxUsed; M.ctxWin = j.ctxWin;
       M.tps = j.tps; M.tok = j.tok || M.tok; M.tools = j.tools || []; M.toolCount = j.toolCount || 0;
       M.jobs = j.jobs || []; M.skills = j.skills || []; M.log = j.log || [];
       M.steps = j.steps || []; M.turnOpen = j.turnOpen;
+    /* 回合从“进行中”变为“结束” → 记下时刻，画一圈涟漪并挂个标记 */
+    if (typeof wasOpen !== 'undefined' && wasOpen && !M.turnOpen) {
+      M.turnEndAt = Date.now();
+      M.turnEndTurn = j.turn;
+    }
+    if (M.turnOpen) M.turnEndAt = 0;
       M.ticks = j.ticks || []; M.toolStats = j.toolStats || []; M.turnsList = j.turnsList || [];
       M.approvalsList = j.approvalsList || []; M.changes = j.changes || []; M.delivs = j.delivs || [];
       M.subagents = j.subagents || 0; M.approvals = j.approvals || 0; M.todos = j.todos || 0;
@@ -777,10 +784,12 @@ body.compact .dash{grid-template-columns:1fr}
     var stepSec = curStep ? Math.max(0, ((curStep.end || clockNow()) - curStep.t) / 1000) : 0;
     var st = { IDLE: '#8a919d', THINKING: '#f0a6c6', STREAMING: '#e6edfa', TOOL: '#ffc46b', OFFLINE: '#ff8a6b', 'NO DATA': '#ff8a6b', 'NO SESSION': '#ff8a6b' };
     var c = M.ok ? (st[M.state] || '#8a919d') : '#ff8a6b';
-    $('tState').textContent = M.ok ? M.state : (M.state === 'OFFLINE' ? '未连接' : M.state);
-    $('tState').style.color = c;
-    $('cState').textContent = M.ok ? M.state : 'OFFLINE';
-    $('cState').style.color = c;
+    var endedNow = M.turnEndAt && !M.turnOpen;
+    $('tState').textContent = endedNow ? '✓ ' + tr('本轮完成')
+      : (M.ok ? M.state : (M.state === 'OFFLINE' ? '未连接' : M.state));
+    $('tState').style.color = endedNow ? '#8fe0c8' : c;
+    $('cState').textContent = endedNow ? tr('本轮完成') : (M.ok ? M.state : 'OFFLINE');
+    $('cState').style.color = endedNow ? '#8fe0c8' : c;
     $('cTurn').textContent = M.turn;
     $('tTurn').textContent = M.turn;
     /* 会话进度条：一轮一段，宽度按该轮时长 */
@@ -1008,7 +1017,8 @@ body.compact .dash{grid-template-columns:1fr}
         ((Date.now() - M.lastUpdate) / 1000).toFixed(1) + 's 前更新 · ' + (M.bridge.events || 0) + ' 条事件 · preset ' + (M.session.preset || '?'))
       : '<span class="bad">' + esc(M.err || '连不上数据源：检查插件是否启用、或 bridge 是否在跑') + '</span>';
 
-    if (DEBUG) {
+    if (DEBUG) { try { window.__applyState = applyState } catch (e) { }
+      
       window.__M = M;            /* 调试用：状态镜像 */
       window.__HIT = HIT;        /* 调试用：命中表（每帧重建） */
     }
@@ -1913,6 +1923,35 @@ body.compact .dash{grid-template-columns:1fr}
     })();
 
 
+
+    /* 回合结束：中心扩散一圈涟漪，持续 1.8 秒 */
+    if (M.turnEndAt) {
+      var age = Date.now() - M.turnEndAt;
+      if (age < 1800) {
+        var k2 = age / 1800;
+        X.save();
+        X.beginPath();
+        X.arc(ox, oy, base * (0.28 + 0.72 * k2), 0, TAU);
+        X.strokeStyle = 'rgba(143,224,200,' + (0.55 * (1 - k2)).toFixed(3) + ')';
+        X.lineWidth = 3 * (1 - k2) + 0.6;
+        X.stroke();
+        X.beginPath();
+        X.arc(ox, oy, base * (0.28 + 0.72 * Math.max(0, k2 - 0.18)), 0, TAU);
+        X.strokeStyle = 'rgba(143,224,200,' + (0.28 * (1 - k2)).toFixed(3) + ')';
+        X.lineWidth = 2;
+        X.stroke();
+        X.restore();
+      }
+      /* 中心文字：结束时替换状态文字 2.5 秒 */
+      if (age < 2500) {
+        X.save();
+        X.textAlign = 'center';
+        X.font = '600 ' + Math.round(11 * FS) + 'px ui-monospace,Consolas,monospace';
+        X.fillStyle = 'rgba(143,224,200,' + (0.9 * Math.min(1, (2500 - age) / 600)).toFixed(3) + ')';
+        X.fillText(tr('本轮结束'), ox, oy + base * 0.30);
+        X.restore();
+      }
+    }
 
     /* 层标签 */
     var lastStep = (M.sSteps && M.sSteps.length) ? M.sSteps[M.sSteps.length - 1] : null;
