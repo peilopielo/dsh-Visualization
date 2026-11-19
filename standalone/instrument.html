@@ -227,6 +227,14 @@ body.compact .dash{grid-template-columns:1fr}
           <b class="chip" data-fs="0.88">紧凑</b><b class="chip" data-fs="1">标准</b><b class="chip" data-fs="1.15">大字</b></div>
         <div><b style="color:var(--ink)">主题</b>
           <b class="chip" data-theme="auto">跟随 DSH</b><b class="chip" data-theme="dark">深色</b><b class="chip" data-theme="light">浅色</b></div>
+        <div><b style="color:var(--ink)">轮次完成</b>
+          <select id="turnSel" style="background:#1b1e23;color:var(--ink);border:1px solid rgba(190,200,215,.22);
+            font:10px ui-monospace,Consolas,monospace;padding:2px 5px;border-radius:3px;cursor:pointer">
+            <option value="loop">循环涟漪</option>
+            <option value="once">单次涟漪</option>
+            <option value="badge">仅徽标</option>
+            <option value="off">不显示</option>
+          </select></div>
         <div><b style="color:var(--ink)">布局</b>
           <b class="chip" data-lay="wide">标准</b><b class="chip" data-lay="compact">紧凑（隐藏右栏）</b></div>
         <div><b style="color:var(--ink)">导出</b>
@@ -385,6 +393,8 @@ body.compact .dash{grid-template-columns:1fr}
   var TEAMC = { n: 6, opts: [0, 1, 2, 3, 4, 6, 8] };
   /* 字号档：1 = 标准，0.88 = 紧凑，1.15 = 大字（同时作用于 CSS 与画布） */
   var FS = 1;
+  /* 轮次完成的表现形式：loop=循环涟漪 once=单次涟漪 badge=仅徽标 off=都不显示 */
+  var TURNCFG = { mode: 'loop', opts: ['loop', 'once', 'badge', 'off'] };
   function scopeMinTurn() {
     var tl = M.turnsList || [];
     if (!SCOPE.turns || tl.length <= SCOPE.turns) return -Infinity;
@@ -502,6 +512,7 @@ body.compact .dash{grid-template-columns:1fr}
       teamN: TEAMC.n,
       fs: FS,
       theme: THEME_MODE,
+      turnfx: TURNCFG.mode,
       lay: document.body.classList.contains('compact') ? 'compact' : 'wide',
       filter: FILTER.log, fj: FILTER.jobs, ft: FILTER.tools
     };
@@ -555,6 +566,11 @@ body.compact .dash{grid-template-columns:1fr}
     if (typeof s.teamN === 'number' && TEAMC.opts.indexOf(s.teamN) >= 0) TEAMC.n = s.teamN;
     if (typeof s.fs === 'number' && s.fs > 0.5 && s.fs < 2) applyFs(s.fs);
     applyTheme(URL_THEME ? 'auto' : (s.theme === 'light' || s.theme === 'dark' ? s.theme : 'auto'));
+    if (typeof s.turnfx === 'string' && TURNCFG.opts.indexOf(s.turnfx) >= 0) {
+      TURNCFG.mode = s.turnfx;
+      var ts = $('turnSel');
+      if (ts) ts.value = s.turnfx;
+    }
     applyLayout(s.lay === 'compact' ? 'compact' : 'wide');
     if (s.filter) FILTER.log = s.filter;
     if (s.fj) FILTER.jobs = s.fj;
@@ -796,7 +812,7 @@ body.compact .dash{grid-template-columns:1fr}
     var st = { IDLE: '#8a919d', THINKING: '#f0a6c6', STREAMING: '#e6edfa', TOOL: '#ffc46b', OFFLINE: '#ff8a6b', 'NO DATA': '#ff8a6b', 'NO SESSION': '#ff8a6b' };
     var c = M.ok ? (st[M.state] || '#8a919d') : '#ff8a6b';
     /* 只要不在回合中、且有过回合，就算“上一轮已完成”——不依赖是否观察到那一瞬间 */
-    var endedNow = M.ok && !M.turnOpen && (M.turn || 0) > 0;
+    var endedNow = TURNCFG.mode !== 'off' && M.ok && !M.turnOpen && (M.turn || 0) > 0;
     if (endedNow && !M.turnEndAt && !M.turnEndShown) {
       /* 打开面板时已经处于空闲：补一次涟漪，让人看到“刚结束”的动效 */
       M.turnEndAt = Date.now();
@@ -1951,7 +1967,9 @@ body.compact .dash{grid-template-columns:1fr}
 
 
     /* 回合结束的标志：只要没有进行中的回合，就从中心不断向外扩散绿色光环 */
-    if (M.ok && !M.turnOpen && (M.turn || 0) > 0) {
+    var showFx = TURNCFG.mode === 'loop'
+      || (TURNCFG.mode === 'once' && M.turnEndAt && (Date.now() - M.turnEndAt) < 1800);
+    if (showFx && M.ok && !M.turnOpen && (M.turn || 0) > 0) {
       var nowMs = Date.now();
       var base = G.base;                  /* 半径基准（这个作用域里没有同名变量） */
       var CYCLE = 4200;                    /* 一圈的周期（慢一点） */
@@ -2143,6 +2161,17 @@ body.compact .dash{grid-template-columns:1fr}
       if (openPopup(e)) return;
       /* 浏览器里被拦：让 <a target="_blank"> 自己走；同时给个地址面板保底 */
       setTimeout(function () { if (!document.hidden) showUrlPanel() }, 900);
+    });
+  }
+
+  var turnSel = $('turnSel');
+  if (turnSel) {
+    turnSel.value = TURNCFG.mode;
+    turnSel.addEventListener('change', function () {
+      var v = turnSel.value;
+      if (TURNCFG.opts.indexOf(v) >= 0) TURNCFG.mode = v;
+      savePrefs();
+      try { draw(); } catch (e) { }
     });
   }
 
