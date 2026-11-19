@@ -216,6 +216,27 @@ function locateAnySession(id) {
   return null
 }
 
+/* 读一次首条事件，拿到 isChild / origin / depth（带缓存） */
+function sessionMeta(id) {
+  const hit = locateAnySession(id)
+  if (!hit || !hit.file) return null
+  let st = null
+  try { st = fs.statSync(hit.file) } catch (e) { return null }
+  const key = st.mtimeMs + ':' + st.size
+  const cached = META_CACHE.get('meta:' + id)
+  if (cached && cached.key === key) return cached.data
+  const ev = firstSessionEvent(hit.file)
+  const sd = ev ? (ev.type === 'session' ? (ev.data || ev) : (ev.data || ev)) : null
+  const data = {
+    isChild: !!hit.isChild,
+    origin: (sd && sd.origin) || '',
+    depth: (sd && sd.delegationDepth) || 0,
+    parent: (sd && sd.parentSession) || null,
+  }
+  META_CACHE.set('meta:' + id, { key, data })
+  return data
+}
+
 function sessionParent(id) {
   const hit = locateAnySession(id)
   if (!hit || !hit.file) return null
@@ -239,10 +260,11 @@ function noteViewed(id) {
   const raw = String(id || '').replace(/^session-/, '')
   if (!/^[0-9a-f][0-9a-f-]{7,}$/i.test(raw)) return false
   const full = 'session-' + raw
-  /* 子智能体不是"你在看的会话"——它被派出去干活，不能抢跟随目标 */
-  let parent = null
-  try { parent = sessionParent(full) } catch (e) { parent = null }
-  if (parent) return false
+  /* 只排除"真·子智能体"：目录名无前缀，或首条事件声明 origin=subagent / depth>0。
+     注意不能只看 parentSession —— 分叉（fork）也可能带它，那是用户主动打开的会话。 */
+  let meta = null
+  try { meta = sessionMeta(full) } catch (e) { meta = null }
+  if (meta && (meta.isChild || meta.origin === 'subagent' || (meta.depth || 0) > 0)) return false
   VIEWED.id = full
   VIEWED.at = Date.now()
   return true

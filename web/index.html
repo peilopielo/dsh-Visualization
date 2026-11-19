@@ -796,7 +796,8 @@ window.__I18N.hi = {
     subagents: 0, approvals: 0, todos: 0, errs: 0,
     session: {}, bridge: {}, model: '—', lastUpdate: 0, stale: false,
     /* 按"显示轮数"收窄后的数组，render 里赋值；先给空数组，免得 draw 在首帧读到 undefined */
-    sSteps: [], sJobs: [], sTools: [], sLog: [], sStats: []
+    sSteps: [], sJobs: [], sTools: [], sLog: [], sStats: [],
+    steps: [], subs: [], changes: [], delivs: [], team: null, warn: null,
   };
   var COL = { session: '#e6edfa', task: '#f0a6c6', skill: '#b28cff', tool: '#ffc46b' };
 
@@ -1221,7 +1222,8 @@ window.__I18N.hi = {
   }
   function translateDom() {
     if (LANG === 'zh') return;
-    var root = document.querySelector('.dash');
+    /* 抽屉会被挪到 body 下，所以整页扫，别只扫 .dash */
+    var root = document.body;
     if (!root) return;
     var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
     var nodes = [], n;
