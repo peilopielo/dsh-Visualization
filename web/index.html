@@ -2524,7 +2524,7 @@ window.__I18N.hi = {
       var rStart = 0;                                      /* 从最中心出发 */
       var travel = 3000;                                   /* 一趟 3 秒（慢一倍） */
       var turns = M.turns || M.turn || 0;
-      var count = Math.max(8, Math.min(56, Math.round(turns / 3) || 8));
+      var count = Math.max(16, Math.min(112, Math.round(turns / 1.5) || 16));
       var now = Date.now();
       X.save();
       for (var pi = 0; pi < count; pi++) {
@@ -2542,7 +2542,7 @@ window.__I18N.hi = {
         var sz2 = 1.3 + 1.0 * al2;
         X.beginPath();
         X.arc(px2, py2, sz2, 0, TAU);
-        X.fillStyle = 'rgba(255,255,255,' + (0.42 * al2).toFixed(3) + ')';
+        X.fillStyle = 'rgba(255,255,255,' + (0.21 * al2).toFixed(3) + ')';
         X.shadowColor = 'rgba(220,240,255,.9)';
         X.shadowBlur = 5 * al2;
         X.fill();
