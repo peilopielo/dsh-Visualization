@@ -1974,13 +1974,13 @@ body.compact .dash{grid-template-columns:1fr}
       X.save();
       /* 以最内环（① 会话，固定 0.24×base）为参照：0.72 ~ 0.92 倍之间呼吸
          （最小也放大，幅度收窄，不再忽大忽小） */
-      var br = bbase * 0.24 * (0.72 + 0.20 * bs);
+      var br = bbase * 0.24 * (0.78 + 0.12 * bs);
       X.beginPath();
       X.arc(ox, oy, br, 0, TAU);
-      X.strokeStyle = 'rgba(130,255,205,' + (0.35 + 0.50 * bs).toFixed(3) + ')';
+      X.strokeStyle = 'rgba(130,255,205,' + (0.38 + 0.32 * bs).toFixed(3) + ')';
       X.shadowColor = 'rgba(120,255,200,.9)';
-      X.shadowBlur = 6 + 16 * bs;
-      X.lineWidth = 1.5 + 8 * bs;
+      X.shadowBlur = 4 + 7 * bs;
+      X.lineWidth = 2.4 + 3.0 * bs;
       X.stroke();
       /* 内圈跟着反向一点，层次更明显 */
       X.beginPath();
