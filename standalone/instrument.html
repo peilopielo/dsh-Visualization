@@ -223,9 +223,9 @@ body.compact .dash{grid-template-columns:1fr}
         <select id="turnSel" title="轮次完成的表现形式" style="background:#1b1e23;color:var(--ink);
           border:1px solid rgba(190,200,215,.22);font:10px ui-monospace,Consolas,monospace;
           padding:2px 5px;border-radius:3px;cursor:pointer">
+          <option value="breathe">收缩膨胀</option>
           <option value="loop">循环涟漪</option>
           <option value="once">单次涟漪</option>
-          <option value="breathe">收缩膨胀</option>
           <option value="badge">仅徽标</option>
           <option value="off">不显示</option>
         </select>
@@ -396,7 +396,7 @@ body.compact .dash{grid-template-columns:1fr}
   /* 字号档：1 = 标准，0.88 = 紧凑，1.15 = 大字（同时作用于 CSS 与画布） */
   var FS = 1;
   /* 轮次完成的表现形式：loop=循环涟漪 once=单次涟漪 badge=仅徽标 off=都不显示 */
-  var TURNCFG = { mode: 'loop', opts: ['loop', 'once', 'breathe', 'badge', 'off'] };
+  var TURNCFG = { mode: 'breathe', opts: ['breathe', 'loop', 'once', 'badge', 'off'] };
   function scopeMinTurn() {
     var tl = M.turnsList || [];
     if (!SCOPE.turns || tl.length <= SCOPE.turns) return -Infinity;
@@ -1977,16 +1977,17 @@ body.compact .dash{grid-template-columns:1fr}
       var bs = 0.5 - 0.5 * Math.cos(bph * TAU);        /* 0 → 1 → 0 */
       var bbase = G.base;
       X.save();
+      var br = bbase * (0.20 + 0.42 * bs);      /* 0.20 → 0.62 之间呼吸 */
       X.beginPath();
-      X.arc(ox, oy, bbase * (0.52 + 0.075 * bs), 0, TAU);
-      X.strokeStyle = 'rgba(130,255,205,' + (0.30 + 0.55 * bs).toFixed(3) + ')';
+      X.arc(ox, oy, br, 0, TAU);
+      X.strokeStyle = 'rgba(130,255,205,' + (0.35 + 0.50 * bs).toFixed(3) + ')';
       X.shadowColor = 'rgba(120,255,200,.9)';
       X.shadowBlur = 6 + 16 * bs;
-      X.lineWidth = 2 + 7 * bs;
+      X.lineWidth = 1.5 + 8 * bs;
       X.stroke();
       /* 内圈跟着反向一点，层次更明显 */
       X.beginPath();
-      X.arc(ox, oy, bbase * (0.52 + 0.075 * bs) - 9 - 4 * bs, 0, TAU);
+      X.arc(ox, oy, Math.max(8, br - 8 - 4 * bs), 0, TAU);
       X.strokeStyle = 'rgba(130,255,205,' + (0.10 + 0.20 * bs).toFixed(3) + ')';
       X.shadowBlur = 0;
       X.lineWidth = 1.2;
