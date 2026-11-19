@@ -53,6 +53,7 @@ window.__I18N.en = {
     '跟随 DSH': 'follow DSH',
     '本轮结束': 'turn finished', '本轮完成': 'turn complete',
     '轮次完成': 'turn end', '循环涟漪': 'looping ripple', '单次涟漪': 'one ripple', '仅徽标': 'badge only', '不显示': 'off',
+    '收缩膨胀': 'breathe',
   },
   rules: [
     [/^轮次 \/ (\d+)$/, 'Turns / $1'],

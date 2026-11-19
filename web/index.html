@@ -219,6 +219,16 @@ body.compact .dash{grid-template-columns:1fr}
         <b id="tnBtn" class="chip">连线轮数：1</b><b id="scBtn" class="chip">显示轮数：1</b>
         <i class="gl">智能体</i>
         <b id="subBtn" class="chip">子圆：4</b><b id="teamBtn" class="chip">团队：6</b>
+        <i class="gl">完成</i>
+        <select id="turnSel" title="轮次完成的表现形式" style="background:#1b1e23;color:var(--ink);
+          border:1px solid rgba(190,200,215,.22);font:10px ui-monospace,Consolas,monospace;
+          padding:2px 5px;border-radius:3px;cursor:pointer">
+          <option value="loop">循环涟漪</option>
+          <option value="once">单次涟漪</option>
+          <option value="breathe">收缩膨胀</option>
+          <option value="badge">仅徽标</option>
+          <option value="off">不显示</option>
+        </select>
       </div>
       <div id="cfgPanel" style="display:none;position:fixed;left:24px;bottom:96px;z-index:70;width:420px;padding:10px 12px;box-shadow:0 12px 40px rgba(0,0,0,.6);
         background:rgba(10,12,16,.96);border:1px solid rgba(190,200,215,.28);border-radius:4px;
@@ -227,14 +237,6 @@ body.compact .dash{grid-template-columns:1fr}
           <b class="chip" data-fs="0.88">紧凑</b><b class="chip" data-fs="1">标准</b><b class="chip" data-fs="1.15">大字</b></div>
         <div><b style="color:var(--ink)">主题</b>
           <b class="chip" data-theme="auto">跟随 DSH</b><b class="chip" data-theme="dark">深色</b><b class="chip" data-theme="light">浅色</b></div>
-        <div><b style="color:var(--ink)">轮次完成</b>
-          <select id="turnSel" style="background:#1b1e23;color:var(--ink);border:1px solid rgba(190,200,215,.22);
-            font:10px ui-monospace,Consolas,monospace;padding:2px 5px;border-radius:3px;cursor:pointer">
-            <option value="loop">循环涟漪</option>
-            <option value="once">单次涟漪</option>
-            <option value="badge">仅徽标</option>
-            <option value="off">不显示</option>
-          </select></div>
         <div><b style="color:var(--ink)">布局</b>
           <b class="chip" data-lay="wide">标准</b><b class="chip" data-lay="compact">紧凑（隐藏右栏）</b></div>
         <div><b style="color:var(--ink)">导出</b>
@@ -378,6 +380,7 @@ window.__I18N.en = {
     '跟随 DSH': 'follow DSH',
     '本轮结束': 'turn finished', '本轮完成': 'turn complete',
     '轮次完成': 'turn end', '循环涟漪': 'looping ripple', '单次涟漪': 'one ripple', '仅徽标': 'badge only', '不显示': 'off',
+    '收缩膨胀': 'breathe',
   },
   rules: [
     [/^轮次 \/ (\d+)$/, 'Turns / $1'],
@@ -473,6 +476,7 @@ window.__I18N.ja = {
     '跟随 DSH': 'DSH に従う',
     '本轮结束': 'ターン終了', '本轮完成': 'ターン完了',
     '轮次完成': 'ターン完了', '循环涟漪': '繰り返し波紋', '单次涟漪': '一度だけ波紋', '仅徽标': 'バッジのみ', '不显示': '表示しない',
+    '收缩膨胀': '収縮と膨張',
   },
   rules: [
     [/^轮次 \/ (\d+)$/, 'ターン / $1'],
@@ -567,6 +571,7 @@ window.__I18N.ko = {
     '跟随 DSH': 'DSH 따름',
     '本轮结束': '턴 종료', '本轮完成': '턴 완료',
     '轮次完成': '턴 완료', '循环涟漪': '반복 물결', '单次涟漪': '한 번 물결', '仅徽标': '배지만', '不显示': '표시 안 함',
+    '收缩膨胀': '수축·팽창',
   },
   rules: [
     [/^轮次 \/ (\d+)$/, '턴 / $1'],
@@ -661,6 +666,7 @@ window.__I18N.ru = {
     '跟随 DSH': 'как в DSH',
     '本轮结束': 'ход завершён', '本轮完成': 'ход готов',
     '轮次完成': 'конец хода', '循环涟漪': 'повторная волна', '单次涟漪': 'одна волна', '仅徽标': 'только значок', '不显示': 'не показывать',
+    '收缩膨胀': 'пульсация',
   },
   rules: [
     [/^轮次 \/ (\d+)$/, 'Ходы / $1'],
@@ -755,6 +761,7 @@ window.__I18N.hi = {
     '跟随 DSH': 'DSH के अनुसार',
     '本轮结束': 'टर्न समाप्त', '本轮完成': 'टर्न पूर्ण',
     '轮次完成': 'टर्न समाप्ति', '循环涟漪': 'दोहरी लहर', '单次涟漪': 'एक लहर', '仅徽标': 'केवल बैज', '不显示': 'न दिखाएँ',
+    '收缩膨胀': 'सिकुड़न-फैलाव',
   },
   rules: [
     [/^轮次 \/ (\d+)$/, 'टर्न / $1'],
@@ -862,7 +869,7 @@ window.__I18N.hi = {
   /* 字号档：1 = 标准，0.88 = 紧凑，1.15 = 大字（同时作用于 CSS 与画布） */
   var FS = 1;
   /* 轮次完成的表现形式：loop=循环涟漪 once=单次涟漪 badge=仅徽标 off=都不显示 */
-  var TURNCFG = { mode: 'loop', opts: ['loop', 'once', 'badge', 'off'] };
+  var TURNCFG = { mode: 'loop', opts: ['loop', 'once', 'breathe', 'badge', 'off'] };
   function scopeMinTurn() {
     var tl = M.turnsList || [];
     if (!SCOPE.turns || tl.length <= SCOPE.turns) return -Infinity;
@@ -2435,9 +2442,41 @@ window.__I18N.hi = {
 
 
     /* 回合结束的标志：只要没有进行中的回合，就从中心不断向外扩散绿色光环 */
+    var idleNow = M.ok && !M.turnOpen && (M.turn || 0) > 0;
+
+    /* 收缩膨胀：位置不动的绿圈，半径与线宽一起呼吸 */
+    if (TURNCFG.mode === 'breathe' && idleNow) {
+      var bph = (Date.now() % 2600) / 2600;
+      var bs = 0.5 - 0.5 * Math.cos(bph * TAU);        /* 0 → 1 → 0 */
+      var bbase = G.base;
+      X.save();
+      X.beginPath();
+      X.arc(ox, oy, bbase * (0.52 + 0.075 * bs), 0, TAU);
+      X.strokeStyle = 'rgba(130,255,205,' + (0.30 + 0.55 * bs).toFixed(3) + ')';
+      X.shadowColor = 'rgba(120,255,200,.9)';
+      X.shadowBlur = 6 + 16 * bs;
+      X.lineWidth = 2 + 7 * bs;
+      X.stroke();
+      /* 内圈跟着反向一点，层次更明显 */
+      X.beginPath();
+      X.arc(ox, oy, bbase * (0.52 + 0.075 * bs) - 9 - 4 * bs, 0, TAU);
+      X.strokeStyle = 'rgba(130,255,205,' + (0.10 + 0.20 * bs).toFixed(3) + ')';
+      X.shadowBlur = 0;
+      X.lineWidth = 1.2;
+      X.stroke();
+      /* 中心文字 */
+      X.textAlign = 'center';
+      X.font = '600 ' + Math.round(10 * FS) + 'px ui-monospace,Consolas,monospace';
+      X.fillStyle = 'rgba(143,224,200,0.75)';
+      X.shadowBlur = 0;
+      X.fillText(tr('本轮完成'), ox, oy + bbase * 0.30);
+      X.textAlign = 'left';
+      X.restore();
+    }
+
     var showFx = TURNCFG.mode === 'loop'
       || (TURNCFG.mode === 'once' && M.turnEndAt && (Date.now() - M.turnEndAt) < 1800);
-    if (showFx && M.ok && !M.turnOpen && (M.turn || 0) > 0) {
+    if (showFx && idleNow) {
       var nowMs = Date.now();
       var base = G.base;                  /* 半径基准（这个作用域里没有同名变量） */
       var CYCLE = 4200;                    /* 一圈的周期（慢一点） */

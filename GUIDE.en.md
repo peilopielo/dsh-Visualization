@@ -182,7 +182,7 @@ Click **⚙ settings** to open the drawer:
 |---|---|
 | theme | dark / light (light inverts the page; ring hues are preserved) |
 | text size | compact / standard / large — scales both tables and canvas labels |
-| turn end | looping ripple / one ripple / badge only / off |
+| turn end | looping ripple / one ripple / breathe / badge only / off |
 | layout | standard / compact (hides the right column so the rings use the full width) |
 | export | save PNG (current rings view) / save JSON (complete state) |
 
