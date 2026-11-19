@@ -1156,7 +1156,9 @@ body.compact .dash{grid-template-columns:1fr}
     grd.addColorStop(0, rgba(stc, 0.5 + b * 0.3));
     grd.addColorStop(1, rgba(stc, 0));
     X.fillStyle = grd; X.beginPath(); X.arc(ox, oy, Math.max(26, G.base * 0.16), 0, TAU); X.fill();
-    X.fillStyle = '#fff'; X.beginPath(); X.arc(ox, oy, cr, 0, TAU); X.fill();
+    /* 中心不再画实心白点：它会从轮次数字的缝隙里透出来，像个脏点 */
+    X.fillStyle = 'rgba(255,255,255,' + (0.16 + b * 0.10).toFixed(3) + ')';
+    X.beginPath(); X.arc(ox, oy, Math.max(1.2, cr * 0.42), 0, TAU); X.fill();
 
     var i, rr, a;
 
