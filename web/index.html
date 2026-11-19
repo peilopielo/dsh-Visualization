@@ -2450,7 +2450,9 @@ window.__I18N.hi = {
       var bs = 0.5 - 0.5 * Math.cos(bph * TAU);        /* 0 → 1 → 0 */
       var bbase = G.base;
       X.save();
-      var br = bbase * (0.20 + 0.42 * bs);      /* 0.20 → 0.62 之间呼吸 */
+      /* 以最内环（① 会话，固定 0.24×base）为参照：在它的 0.55 ~ 0.89 倍之间呼吸，
+         正好落在你标的那两个圈上 */
+      var br = bbase * 0.24 * (0.55 + 0.34 * bs);
       X.beginPath();
       X.arc(ox, oy, br, 0, TAU);
       X.strokeStyle = 'rgba(130,255,205,' + (0.35 + 0.50 * bs).toFixed(3) + ')';
