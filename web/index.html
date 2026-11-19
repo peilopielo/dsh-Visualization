@@ -2396,20 +2396,20 @@ window.__I18N.hi = {
     /* 回合结束的标志：只要没有进行中的回合，就从中心不断向外扩散绿色光环 */
     if (M.ok && !M.turnOpen && (M.turn || 0) > 0) {
       var nowMs = Date.now();
-      var CYCLE = 2200;                    /* 一圈的周期 */
+      var CYCLE = 1600;                    /* 一圈的周期 */
       var RINGS = 3;                       /* 同时存在几圈 */
       X.save();
       for (var ri = 0; ri < RINGS; ri++) {
         var ph = ((nowMs % CYCLE) / CYCLE + ri / RINGS) % 1;
         var rr = base * (0.10 + 0.98 * ph);
-        var al = 0.9 * (1 - ph) * (1 - ph);
+        var al = Math.min(1, 1.15 * (1 - ph));
         X.save();
-        X.shadowColor = 'rgba(143,224,200,.85)';
-        X.shadowBlur = 14 * (1 - ph);
+        X.shadowColor = 'rgba(120,255,200,1)';
+        X.shadowBlur = 22 * (1 - ph) + 2;
         X.beginPath();
         X.arc(ox, oy, rr, 0, TAU);
-        X.strokeStyle = 'rgba(150,255,220,' + al.toFixed(3) + ')';
-        X.lineWidth = 6 * (1 - ph) + 1;
+        X.strokeStyle = 'rgba(130,255,205,' + al.toFixed(3) + ')';
+        X.lineWidth = 9 * (1 - ph) + 1.8;
         X.stroke();
         X.restore();
       }
