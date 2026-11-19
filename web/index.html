@@ -1247,7 +1247,13 @@ window.__I18N.hi = {
     var stepSec = curStep ? Math.max(0, ((curStep.end || clockNow()) - curStep.t) / 1000) : 0;
     var st = { IDLE: '#8a919d', THINKING: '#f0a6c6', STREAMING: '#e6edfa', TOOL: '#ffc46b', OFFLINE: '#ff8a6b', 'NO DATA': '#ff8a6b', 'NO SESSION': '#ff8a6b' };
     var c = M.ok ? (st[M.state] || '#8a919d') : '#ff8a6b';
-    var endedNow = M.turnEndAt && !M.turnOpen;
+    /* 只要不在回合中、且有过回合，就算“上一轮已完成”——不依赖是否观察到那一瞬间 */
+    var endedNow = M.ok && !M.turnOpen && (M.turn || 0) > 0;
+    if (endedNow && !M.turnEndAt && !M.turnEndShown) {
+      /* 打开面板时已经处于空闲：补一次涟漪，让人看到“刚结束”的动效 */
+      M.turnEndAt = Date.now();
+      M.turnEndShown = 1;
+    }
     $('tState').textContent = endedNow ? '✓ ' + tr('本轮完成')
       : (M.ok ? M.state : (M.state === 'OFFLINE' ? '未连接' : M.state));
     $('tState').style.color = endedNow ? '#8fe0c8' : c;
