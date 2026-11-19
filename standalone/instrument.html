@@ -1934,13 +1934,13 @@ body.compact .dash{grid-template-columns:1fr}
     if (M.ok && !M.turnOpen && (M.turn || 0) > 0) {
       var nowMs = Date.now();
       var base = G.base;                  /* 半径基准（这个作用域里没有同名变量） */
-      var CYCLE = 1600;                    /* 一圈的周期 */
-      var RINGS = 3;                       /* 同时存在几圈 */
+      var CYCLE = 3200;                    /* 一圈的周期（慢一点） */
+      var RINGS = 2;                       /* 同时只有两圈 */
       X.save();
       for (var ri = 0; ri < RINGS; ri++) {
         var ph = ((nowMs % CYCLE) / CYCLE + ri / RINGS) % 1;
-        var rr = base * (0.10 + 0.98 * ph);
-        var al = Math.min(1, 1.15 * (1 - ph));
+        var rr = base * (0.12 + 0.78 * ph);   /* 外侧不再扩到画布边缘 */
+        var al = Math.max(0, 0.85 * (1 - ph));
         X.save();
         X.shadowColor = 'rgba(120,255,200,1)';
         X.shadowBlur = 22 * (1 - ph) + 2;
