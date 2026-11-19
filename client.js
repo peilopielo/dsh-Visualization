@@ -11,7 +11,7 @@ window.__ModuleLoader__.load({
 
     const URL = '/dsh-visualization/'
     /* 升级插件后改这里：iframe 地址变化，避免浏览器/CEF 复用旧页面缓存 */
-    const ASSET_V = '0.1.55'
+    const ASSET_V = '0.1.56'
 
     /* 宿主页面地址里通常带着当前会话 id（uuid）；带着就让面板跟随它。
        读不到就退回"自动跟最新会话"。 */

@@ -934,7 +934,7 @@ function childStats(entry) {
   return data
 }
 
-const CHILDREN_TTL = 1500
+const CHILDREN_TTL = 400
 const CHILDREN_AT = new Map()
 
 function childrenOf(parentId) {
