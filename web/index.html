@@ -1629,9 +1629,7 @@ window.__I18N.hi = {
     grd.addColorStop(0, rgba(stc, 0.5 + b * 0.3));
     grd.addColorStop(1, rgba(stc, 0));
     X.fillStyle = grd; X.beginPath(); X.arc(ox, oy, Math.max(26, G.base * 0.16), 0, TAU); X.fill();
-    /* 中心不再画实心白点：它会从轮次数字的缝隙里透出来，像个脏点 */
-    X.fillStyle = 'rgba(255,255,255,' + (0.16 + b * 0.10).toFixed(3) + ')';
-    X.beginPath(); X.arc(ox, oy, Math.max(1.2, cr * 0.42), 0, TAU); X.fill();
+    /* 中心不再画点（保留上面那圈柔光） */
 
     var i, rr, a;
 
@@ -2524,6 +2522,39 @@ window.__I18N.hi = {
       X.textAlign = "left";
       X.restore();
     }
+
+    /* 从核心射向 ① 会话环的粒子：数量随轮次增长，有上限；alpha 0→1→0 */
+    (function () {
+      var rEnd = (typeof R !== 'undefined' && R && R[0]) ? R[0] : G.base * 0.24;
+      var rStart = Math.max(6, G.base * 0.055);
+      var travel = 1500;                                   /* 一趟 1.5 秒 */
+      var turns = M.turns || M.turn || 0;
+      var count = Math.max(2, Math.min(16, Math.round(turns / 12) || 2));
+      var now = Date.now();
+      X.save();
+      for (var pi = 0; pi < count; pi++) {
+        var ph2 = ((now / travel) + pi / count) % 1;
+        var ang2 = pi * 2.399963 + (Math.floor(now / travel) % count) * 0.6;  /* 黄金角均匀分布 */
+        var rr2 = rStart + (rEnd - rStart) * ph2;
+        var al2 = Math.pow(ph2, 0.75);                      /* 由透明到不透明，抵达时最亮 */
+        var px2 = ox + Math.cos(ang2) * rr2;
+        var py2 = oy + Math.sin(ang2) * rr2;
+        var sz2 = 1.4 + 0.8 * al2;
+        X.beginPath();
+        X.arc(px2, py2, sz2, 0, TAU);
+        X.fillStyle = 'rgba(160,255,225,' + (0.75 * al2).toFixed(3) + ')';
+        X.shadowColor = 'rgba(130,255,200,.9)';
+        X.shadowBlur = 6 * al2;
+        X.fill();
+        /* 短拖尾 */
+        X.beginPath();
+        X.arc(ox + Math.cos(ang2) * (rr2 - 7 * al2), oy + Math.sin(ang2) * (rr2 - 7 * al2), sz2 * 0.6, 0, TAU);
+        X.fillStyle = 'rgba(160,255,225,' + (0.28 * al2).toFixed(3) + ')';
+        X.shadowBlur = 0;
+        X.fill();
+      }
+      X.restore();
+    })();
 
     /* 层标签 */
     var lastStep = (M.sSteps && M.sSteps.length) ? M.sSteps[M.sSteps.length - 1] : null;
