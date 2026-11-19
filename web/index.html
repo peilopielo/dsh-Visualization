@@ -1582,12 +1582,7 @@ window.__I18N.hi = {
     webC.width = Math.ceil(2 * Rc * d); webC.height = Math.ceil(2 * Rc * d);
     var c = webC.getContext('2d');
     c.setTransform(d, 0, 0, d, 0, 0); c.translate(Rc, Rc);
-    /* 原来的 620 条随机曲线太乱，去掉；只留一层很淡的点，作为核心的"颗粒感" */
-    for (var i = 0; i < 26; i++) {
-      var na = Math.random() * TAU, nr = Rc * Math.random() * 0.95;
-      c.fillStyle = 'rgba(240,246,255,' + (0.15 + Math.random() * 0.5).toFixed(2) + ')';
-      c.beginPath(); c.arc(Math.cos(na) * nr, Math.sin(na) * nr, 0.7 + Math.random() * 1.1, 0, TAU); c.fill();
-    }
+    /* 静止的点已去掉：中心只留柔光和一圈描边，动效交给流出的粒子 */
     var g = c.createRadialGradient(0, 0, 0, 0, 0, Rc);
     g.addColorStop(0, 'rgba(170,200,245,.15)');
     g.addColorStop(0.55, 'rgba(150,170,205,.05)');
@@ -2446,7 +2441,7 @@ window.__I18N.hi = {
 
     /* 收缩膨胀：位置不动的绿圈，半径与线宽一起呼吸 */
     if (TURNCFG.mode === 'breathe' && idleNow) {
-      var bph = (Date.now() % 2600) / 2600;
+      var bph = (Date.now() % 5200) / 5200;
       var bs = 0.5 - 0.5 * Math.cos(bph * TAU);        /* 0 → 1 → 0 */
       var bbase = G.base;
       X.save();
@@ -2527,9 +2522,9 @@ window.__I18N.hi = {
     (function () {
       var rEnd = (typeof R !== 'undefined' && R && R[0]) ? R[0] : G.base * 0.24;
       var rStart = 0;                                      /* 从最中心出发 */
-      var travel = 1500;                                   /* 一趟 1.5 秒 */
+      var travel = 3000;                                   /* 一趟 3 秒（慢一倍） */
       var turns = M.turns || M.turn || 0;
-      var count = Math.max(4, Math.min(28, Math.round(turns / 6) || 4));
+      var count = Math.max(8, Math.min(56, Math.round(turns / 3) || 8));
       var now = Date.now();
       X.save();
       for (var pi = 0; pi < count; pi++) {
@@ -2547,7 +2542,7 @@ window.__I18N.hi = {
         var sz2 = 1.3 + 1.0 * al2;
         X.beginPath();
         X.arc(px2, py2, sz2, 0, TAU);
-        X.fillStyle = 'rgba(255,255,255,' + (0.85 * al2).toFixed(3) + ')';
+        X.fillStyle = 'rgba(255,255,255,' + (0.42 * al2).toFixed(3) + ')';
         X.shadowColor = 'rgba(220,240,255,.9)';
         X.shadowBlur = 5 * al2;
         X.fill();
