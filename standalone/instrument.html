@@ -2049,7 +2049,7 @@ body.compact .dash{grid-template-columns:1fr}
     (function () {
       var rEnd = (typeof R !== 'undefined' && R && R[0]) ? R[0] : G.base * 0.24;
       var rStart = 0;                                      /* 从最中心出发 */
-      var travel = 3000;                                   /* 一趟 3 秒（慢一倍） */
+      var travel = 4500;                                   /* 一趟 4.5 秒（再慢一半） */
       var turns = M.turns || M.turn || 0;
       var count = Math.max(16, Math.min(112, Math.round(turns / 1.5) || 16));
       var now = Date.now();
@@ -2066,7 +2066,11 @@ body.compact .dash{grid-template-columns:1fr}
         var al2 = Math.min(fadeIn, fadeOut);
         var px2 = ox + Math.cos(ang2) * rr2;
         var py2 = oy + Math.sin(ang2) * rr2;
-        var sz2 = 1.3 + 1.0 * al2;
+        /* 每颗粒子固定一个随机缩放（用序号算伪随机，避免每帧抖动）：
+           fract(sin(i·12.9898)·43758.5453) ∈ [0,1) */
+        var seed = Math.sin(pi * 12.9898) * 43758.5453;
+        var rnd = seed - Math.floor(seed);
+        var sz2 = (1.3 + 1.0 * al2) * (0.35 + 0.65 * rnd);
         X.beginPath();
         X.arc(px2, py2, sz2, 0, TAU);
         X.fillStyle = 'rgba(255,255,255,' + (0.21 * al2).toFixed(3) + ')';
