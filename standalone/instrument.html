@@ -1933,6 +1933,7 @@ body.compact .dash{grid-template-columns:1fr}
     /* 回合结束的标志：只要没有进行中的回合，就从中心不断向外扩散绿色光环 */
     if (M.ok && !M.turnOpen && (M.turn || 0) > 0) {
       var nowMs = Date.now();
+      var base = G.base;                  /* 半径基准（这个作用域里没有同名变量） */
       var CYCLE = 1600;                    /* 一圈的周期 */
       var RINGS = 3;                       /* 同时存在几圈 */
       X.save();
