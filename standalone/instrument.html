@@ -140,9 +140,11 @@ body.compact .dash{grid-template-columns:1fr}
 .tb .rw{display:grid;gap:9px;align-items:center;padding:4px 0;border-bottom:1px solid var(--line2)}
 .tb .hdrow{color:var(--dim);font-size:9px;letter-spacing:.16em;border-bottom:1px solid var(--line)}
 .tb .rw span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ellip{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
 #taskTable .rw{grid-template-columns:64px 1fr 52px 40px}
-      #subTable .rw{grid-template-columns:1fr 44px 52px 44px}
-      #teamTable .rw{grid-template-columns:1fr 46px 54px}
+      #subTable .rw{grid-template-columns:1fr 34px 38px 70px 38px}
+      #teamTable .rw{grid-template-columns:1fr 40px 28px 70px}
+      #teamTable .rw.trow{grid-template-columns:1fr 46px 52px}
 #skillTable .rw{grid-template-columns:1fr 36px 56px}
 #callTable .rw{grid-template-columns:1fr 40px 58px 44px}
 
@@ -280,7 +282,9 @@ body.compact .dash{grid-template-columns:1fr}
         <div><i>输入</i><b id="tokIn">1.24M</b></div>
         <div><i>输出</i><b id="tokOut">537.7k</b></div>
         <div><i>缓存</i><b id="tokCache">366.42M</b></div>
-        <div><i>模型</i><b id="tokModel" title="deepseek-flash">deepseek-flash</b></div>
+        <div><i>模型</i><b id="tokModel" class="ellip">—</b></div>
+        <div><i>供应商</i><b id="tokProv" class="ellip">—</b></div>
+        <div><i>推理强度</i><b id="tokEffort">—</b></div>
       </div>
     </section>
 
@@ -341,7 +345,8 @@ body.compact .dash{grid-template-columns:1fr}
     tok: { in: 0, out: 0, cache: 0 },
     tools: [], toolCount: 0, jobs: [], skills: [], log: [],
     subagents: 0, approvals: 0, todos: 0, errs: 0,
-    session: {}, bridge: {}, model: '—', lastUpdate: 0, stale: false,
+    session: {}, bridge: {}, model: '—', provider: '', effort: '', modelHist: [],
+    lastUpdate: 0, stale: false,
     /* 按"显示轮数"收窄后的数组，render 里赋值；先给空数组，免得 draw 在首帧读到 undefined */
     sSteps: [], sJobs: [], sTools: [], sLog: [], sStats: [],
     steps: [], subs: [], changes: [], delivs: [], team: null, warn: null,
@@ -692,6 +697,9 @@ body.compact .dash{grid-template-columns:1fr}
     M.warn = j.warn || null;
       M.session = j.session || {}; M.bridge = j.bridge || {}; M.origin = j.origin || M.origin || ''; M.lastUpdate = Date.now();
       M.model = j.model || '—';
+    M.provider = j.provider || '';
+    M.effort = j.effort || '';
+    M.modelHist = j.modelHist || [];
       if (j.replay && j.replay.on) {
         RP.on = true; RP.mode = j.replay.mode || 'seq'; RP.playing = j.replay.playing; RP.speed = j.replay.speed;
         RP.vtime = j.replay.vtime; RP.t0 = j.replay.t0; RP.t1 = j.replay.t1;
@@ -742,6 +750,14 @@ body.compact .dash{grid-template-columns:1fr}
   /* ---------------- 表格 ---------------- */
   function cell(v) { return '<span>' + (v == null ? '' : v) + '</span>' }
   /* 用户输入的文本要转义，否则里面的 < > & 会把表格结构打坏 */
+  /* 模型名太长会撑破表格：只留后半段，完整值放 title */
+  function shortModel(n) {
+    n = String(n || '');
+    if (!n) return '';
+    var s = n.replace(/^deepseek-/, '');     /* deepseek-v4.1-flash → v4.1-flash */
+    if (s.length > 13) s = s.slice(0, 7) + '…' + s.slice(-5);
+    return s;
+  }
   function esc(s) {
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -859,8 +875,13 @@ body.compact .dash{grid-template-columns:1fr}
     $('tokIn').textContent = fmt(M.tok.in);
     $('tokOut').textContent = fmt(M.tok.out);
     $('tokCache').textContent = fmt(M.tok.cache);
+    var fullModel = (M.provider ? M.provider + '/' : '') + (M.model || '');
     $('tokModel').textContent = M.model || '—';
-    $('tokModel').title = M.model || '';
+    $('tokModel').title = fullModel;
+    var pv = $('tokProv');
+    if (pv) { pv.textContent = M.provider || '—'; pv.title = M.provider || ''; }
+    var ef = $('tokEffort');
+    if (ef) { ef.textContent = M.effort || '—'; ef.title = tr('推理强度'); }
     $('sTps').textContent = M.tps ? M.tps + ' tok/s' : '—';
 
     /* 逻辑链 */
@@ -918,20 +939,29 @@ body.compact .dash{grid-template-columns:1fr}
           else if (k.status === 'in_progress') prog++;
           else if (k.status === 'completed') done++;
         });
-        var th = '<div class="rw hdrow">' + cell('成员') + cell('阶段') + cell('任务') + '</div>';
+        /* 成员 → 模型：成员的会话 id 就是子会话 id，能对上就用子会话的，队长用当前会话的 */
+        var kidById = {};
+        (M.subs || []).forEach(function (s) { kidById[s.id] = s; });
+        var th = '<div class="rw hdrow">' + cell('成员') + cell('阶段') + cell('任务') + cell('模型') + '</div>';
         rows.forEach(function (m) {
           var mine = tsk.filter(function (k) { return k.ownerId === m.id && k.status !== 'completed' }).length;
           var cls = m.phase === 'active' ? 'run' : (m.phase === 'failed' ? 'bad' : 'done');
-          th += '<div class="rw">' + cell('<span class="' + cls + '">' + esc(m.name) + '</span>') +
+          var kid = kidById[m.id];
+          var mm = m.id === meId ? M.model : (kid ? kid.model : '');
+          var mp = m.id === meId ? M.provider : (kid ? kid.provider : '');
+          th += '<div class="rw" title="' + esc((mp ? mp + '/' : '') + (mm || '')) + '">' +
+            cell('<span class="' + cls + '">' + esc(m.name) + '</span>') +
             cell(m.phase === 'active' ? '进行中' : (m.phase === 'failed' ? '失败' : '准备中')) +
-            cell(String(mine)) + '</div>';
+            cell(String(mine)) +
+            cell('<span style="text-align:right;color:var(--dim)">' + esc(shortModel(mm) || '—') + '</span>') +
+            '</div>';
         });
         if (tsk.length) {
-          th += '<div class="rw hdrow">' + cell('任务') + cell('状态') + cell('负责人') + '</div>';
+          th += '<div class="rw hdrow trow">' + cell('任务') + cell('状态') + cell('负责人') + '</div>';
           tsk.filter(function (k) { return k.status !== 'completed' }).slice(0, 5).forEach(function (k) {
             var mark = k.status === 'in_progress' ? '● ' : '○ ';
             var cls2 = k.status === 'in_progress' ? 'run' : 'done';
-            th += '<div class="rw">' + cell(mark + esc(k.subject)) +
+            th += '<div class="rw trow">' + cell(mark + esc(k.subject)) +
               cell('<span class="' + cls2 + '">' + (k.status === 'in_progress' ? '进行中' : '待办') + '</span>') +
               cell(esc(byId[k.ownerId] || (k.ownerId ? String(k.ownerId).slice(0, 6) : '—'))) + '</div>';
           });
@@ -947,13 +977,16 @@ body.compact .dash{grid-template-columns:1fr}
     if (sb) {
       sb.style.display = subs.length ? '' : 'none';
       if (subs.length) {
-        var sh = '<div class="rw hdrow">' + cell('分身') + cell('轮') + cell('工具') + cell('最近') + '</div>';
+        var sh = '<div class="rw hdrow">' + cell('分身') + cell('轮') + cell('工具') + cell('模型') + cell('最近') + '</div>';
         subs.forEach(function (s) {
           var nm = (cn(PRESET_CN, s.preset) || s.preset || 'subagent') + ' · ' + String(s.id).slice(0, 8);
-          sh += '<div class="rw" data-sub="' + esc(s.id) + '" style="cursor:pointer">' +
+          var md = shortModel(s.model);
+          var mdTitle = (s.provider ? s.provider + '/' : '') + (s.model || '') + (s.effort ? ' · ' + s.effort : '');
+          sh += '<div class="rw" data-sub="' + esc(s.id) + '" style="cursor:pointer" title="' + esc(mdTitle) + '">' +
             cell('<span' + (s.running ? ' class="run"' : '') + '>' + nm + '</span>') +
             cell(s.turn != null ? s.turn : '—') +
             cell(s.tools != null ? s.tools : '—') +
+            cell('<span style="text-align:right;color:var(--dim)">' + esc(md || '—') + '</span>') +
             cell(ago(s.last)) + '</div>';
         });
         $('subTable').innerHTML = sh;
@@ -973,7 +1006,15 @@ body.compact .dash{grid-template-columns:1fr}
       var durStr = dur >= 60 ? (dur / 60).toFixed(1) + 'm' : Math.round(dur) + 's';
       var cur3 = (t3.no === M.turn && M.turnOpen);
       var m2 = t3.steps + ' 步 · ' + t3.tools + ' 工具 · ' + durStr + (t3.files ? ' · ' + t3.files + ' 文件' : '');
-      h += '<div class="row2' + (cur3 ? ' cur' : '') + '">' +
+      /* 这一轮换过模型就打标记，悬停看完整 provider/model/effort */
+      var mc = null;
+      (M.modelHist || []).forEach(function (x) { if (x.turn === t3.no) mc = x });
+      var mcTitle = '';
+      if (mc) {
+        mcTitle = (mc.provider ? mc.provider + '/' : '') + (mc.model || '') + (mc.effort ? ' · ' + mc.effort : '');
+        m2 += ' · ⇄ ' + shortModel(mc.model);
+      }
+      h += '<div class="row2' + (cur3 ? ' cur' : '') + '"' + (mcTitle ? ' title="' + esc(mcTitle) + '"' : '') + '>' +
         '<div class="l1"><span class="no">T' + t3.no + (cur3 ? ' ●' : '') + '</span><span class="meta">' + m2 + '</span></div>' +
         '<div class="ask">' + esc(t3.prompt || '（这一轮没有文字请求）') + '</div></div>';
     });

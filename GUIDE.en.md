@@ -78,6 +78,11 @@ the panel, the desktop wallpaper and any browser all show the same settings.
 
 On ring ②, **dim** cells sit outside `line turns`; a **lit** cell with no line means that step called no tools.
 
+**Model info**: under the context block the right column lists **model / provider / reasoning effort**.
+- Data comes from the `model/selection` event (`{ provider, model, reasoningEffort }`), so a switch shows up **immediately**, without waiting for the next request
+- Turns where the model changed carry a `⇄ model` marker in the turn timeline; hover for the full `provider/model · effort`
+- The subagent table and the team member table each have a **model** column: workers and teammates may run a different model than the lead (cheap model for grunt work), and you can see who uses what at a glance
+
 ## 6. Hover and click
 
 Every node on the rings reacts:

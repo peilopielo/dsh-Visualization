@@ -140,6 +140,11 @@ git add -A; git commit -m "..."; git push
     `remove_bundle` → `install_bundle` (a local `link:` install, seconds, no network); the entry is
     rebuilt. Rule of thumb: dependency present + junction present + entry missing = this trap.
 
+10. **`team/member` is a historical event**: in current DSH a teammate is a **continuable entry in the Lead's subagent
+    catalog** and no `team/member` is emitted. Symptom: team mode is on and `team/task` exists, yet the team block
+    shows only the `lead` row. Also `model/selection` is the authoritative model event (it carries `reasoningEffort`);
+    `request/context` lags one step, and a child's `subagent/descriptor` may override `agentModel` / `agentProvider`.
+
 ## 9. Wallpaper
 
 Lively is the only route: `wallpaper/lively/` + `lively-package.zip` (WebView2, full frame rate,

@@ -388,7 +388,9 @@ function concurrency(tools, winMs) {
 function makeFolder() {
   const S = {
     session: { id: '', cwd: '', preset: '', depth: 0, title: '', createdAt: 0 },
-    turn: 0, step: 0, turnOpen: false, turns: 0, model: '', provider: '',
+    turn: 0, step: 0, turnOpen: false, turns: 0, model: '', provider: '', effort: '',
+    /* 每次 model/selection 记一条，时间线标出“第几轮换了模型” */
+    modelHist: [],
     ctxWin: 0, ctxUsed: 0,
     tok: { in: 0, out: 0, cache: 0 },
     tools: [], toolCount: 0, pending: new Set(),
@@ -444,6 +446,23 @@ function makeFolder() {
         if (d.model) S.model = d.model
         if (d.provider) S.provider = d.provider
         break
+      /* 模型选择的权威事件：{ provider, model, reasoningEffort? }。
+         切换模型后下一次请求前就能反映出来，request/context 会晚一步。 */
+      case 'model/selection': {
+        var changed = (d.provider || '') !== S.provider || (d.model || '') !== S.model
+          || (d.reasoningEffort || '') !== S.effort
+        if (d.model) S.model = d.model
+        if (d.provider) S.provider = d.provider
+        S.effort = d.reasoningEffort || ''
+        if (changed || !S.modelHist.length) {
+          S.modelHist.push({
+            turn: d.turn || NOWTURN, t: e.time,
+            provider: S.provider, model: S.model, effort: S.effort,
+          })
+          if (S.modelHist.length > 60) S.modelHist.shift()
+        }
+        break
+      }
       case 'turn/start':
         S.turn = d.turn; S.step = 0; S.turnOpen = true
         S.turnRec.push({
@@ -890,7 +909,7 @@ function childStats(entry) {
   let data = {
     id: entry.id, preset: entry.preset, depth: entry.depth,
     turn: null, step: 0, tools: 0, steps: 0, errs: 0,
-    ctx: 0, tokIn: 0, tokOut: 0, state: '', model: '',
+    ctx: 0, tokIn: 0, tokOut: 0, state: '', model: '', provider: '', effort: '',
     last: 0, running: false,
   }
   try {
@@ -903,6 +922,15 @@ function childStats(entry) {
       try { ev2 = JSON.parse(line) } catch (e) { continue }
       if (!ev2 || !ev2.type) continue
       f.push(ev2)
+      /* 子会话自己的描述符：可能带着 agentModel / agentProvider（分队可以用别的模型） */
+      if (ev2.type === 'subagent/descriptor') {
+        const dd = ev2.data || {}
+        if (dd.agentModel) data.agentModel = dd.agentModel
+        if (dd.agentProvider) data.agentProvider = dd.agentProvider
+        if (dd.agentReasoningEffort) data.agentEffort = dd.agentReasoningEffort
+        if (dd.mode) data.mode = dd.mode
+        if (dd.label) data.label = String(dd.label).slice(0, 40)
+      }
       if (ev2.time && ev2.time > data.last) data.last = ev2.time
     }
     const S2 = f.result()
@@ -918,7 +946,9 @@ function childStats(entry) {
     data.tokIn = (S2.tok && S2.tok.in) || 0
     data.tokOut = (S2.tok && S2.tok.out) || 0
     data.step = S2.step || 0
-    data.model = S2.model || ''
+    data.model = data.agentModel || S2.model || ''
+    data.provider = data.agentProvider || S2.provider || ''
+    data.effort = data.agentEffort || S2.effort || ''
     /* state 不在 result() 里，按 refresh() 同一套规则推：
        pending 工具 → TOOL；刚出过 assistant 文本 → STREAMING；否则 THINKING；回合结束 → IDLE */
     var pend = S2.pending ? S2.pending.size : 0

@@ -102,6 +102,11 @@ git add -A; git commit -m "..."; git push
     症状：`plugin_manager list_plugins` 里**搜不到自己的 entryId**、固定端口（8799）不监听、插件页显示未安装。
     恢复：`remove_bundle` → `install_bundle`（本地 link 装一次，几秒，不走网络），条目就重建了。判断依据：`package.json` 依赖还在 + `node_modules/<name>` junction 还在 + 列表里没有条目，三件事同时成立就是这个坑。
 
+10. **`team/member` 是历史事件**：新版 DSH 里队友是 Lead 的 subagent catalog 里的 **continuable 条目**，不再发 `team/member`。
+    症状：开了团队模式、也有 `team/task`，但「智能体团队」块里只有 `lead` 一行。
+    另外 `model/selection` 才是模型选择的权威事件（带 `reasoningEffort`），`request/context` 会晚一步；
+    子会话的 `subagent/descriptor` 里可能有 `agentModel` / `agentProvider` 覆盖。
+
 ## 9. 壁纸
 
 只有 Lively 一条路：`wallpaper/lively/` + `lively-package.zip`（WebView2 满帧、鼠标可交互）。
