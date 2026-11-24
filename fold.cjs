@@ -1150,13 +1150,26 @@ function handle(req, res) {
       return
     }
     sseClients++
-    res.writeHead(200, {
+    /* 一次状态推送有 300KB 上下（长会话更多），gzip 能压到 1/6；
+       流式 gzip 每写一次 flush 一次，延迟不变 */
+    const sseGz = /\bgzip\b/.test(String(req.headers['accept-encoding'] || ''))
+      ? zlib.createGzip({ level: 1 })
+      : null
+    const head = {
       'content-type': 'text/event-stream; charset=utf-8',
       'cache-control': 'no-store',
       connection: 'keep-alive',
       'x-accel-buffering': 'no',
-    })
-    res.write('retry: 2000\n\n')
+    }
+    if (sseGz) { head['content-encoding'] = 'gzip'; head.vary = 'accept-encoding' }
+    res.writeHead(200, head)
+    if (sseGz) sseGz.pipe(res)
+    const sseWrite = (s) => {
+      try {
+        if (sseGz) { sseGz.write(s); sseGz.flush() } else res.write(s)
+      } catch (e) { }
+    }
+    sseWrite('retry: 2000\n\n')
     const sid = q.get('session') || null
     let last = ''
     let closed = false
@@ -1170,16 +1183,21 @@ function handle(req, res) {
           (body.state || '') + '|' + (body.turn || 0) + '|' + (body.step || 0)
         if (key === last) return
         last = key
-        res.write('data: ' + JSON.stringify(body) + '\n\n')
+        sseWrite('data: ' + JSON.stringify(body) + '\n\n')
       } catch (e) { /* 单次失败不影响连接 */ }
     }
     tick()
     const timer = setInterval(tick, 250)
     const ping = setInterval(() => {
       if (closed) return
-      try { res.write(': ping\n\n') } catch (e) { }
+      sseWrite(': ping\n\n')
     }, 15000)
-    req.on('close', () => { closed = true; sseClients = Math.max(0, sseClients - 1); clearInterval(timer); clearInterval(ping) })
+    req.on('close', () => {
+      closed = true
+      sseClients = Math.max(0, sseClients - 1)
+      clearInterval(timer); clearInterval(ping)
+      try { if (sseGz) sseGz.end() } catch (e) { }
+    })
     return
   }
   /* 某个工具的最近几次调用（含完整参数，按需拉，不进 /state 免得放大轮询） */

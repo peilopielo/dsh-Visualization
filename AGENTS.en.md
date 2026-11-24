@@ -56,6 +56,11 @@ plugin toggle only remounts routes, it does not re-evaluate loaded ESM.
 
 Measured at ~8.7 k events: first fold 240–260 ms, then 7–12 ms per change. Idle SSE = zero bytes.
 
+**Transport**: both `/state` and `/events` negotiate gzip from `accept-encoding`. One state push is around 270 KB for a
+20k-event session and gzips to about 10% (measured 551 KB → 57.8 KB). The SSE stream is gzipped incrementally with a
+`flush()` after each write, so latency is unchanged. Do not swap `sseWrite()` back to `res.write()` — the browser would
+receive raw gzip bytes and EventSource would drop the connection.
+
 **Auto-follow priority** (`pickSession` in `fold.cjs`):
 
 ```

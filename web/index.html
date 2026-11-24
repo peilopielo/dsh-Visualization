@@ -1572,7 +1572,7 @@ window.__I18N.hi = {
         ((Date.now() - M.lastUpdate) / 1000).toFixed(1) + 's 前更新 · ' + (M.bridge.events || 0) + ' 条事件 · preset ' + (M.session.preset || '?'))
       : '<span class="bad">' + esc(M.err || '连不上数据源：检查插件是否启用、或 bridge 是否在跑') + '</span>';
 
-    if (DEBUG) { try { window.__applyState = applyState } catch (e) { }
+    if (DEBUG) { try { window.__applyState = applyState; window.__draw = draw } catch (e) { }
       
       window.__M = M;            /* 调试用：状态镜像 */
       window.__HIT = HIT;        /* 调试用：命中表（每帧重建） */

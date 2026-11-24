@@ -39,6 +39,10 @@ node build.cjs                  # standalone/instrument.html → web/index.html
 
 实测（约 8.7k 事件）：首次折叠 240~260 ms，之后每次变化 7~12 ms；空闲 SSE 零字节。
 
+**传输**：`/state` 与 `/events` 都按 `accept-encoding` 协商 gzip。状态推送一次 270KB 上下（2 万事件的会话），
+gzip 后约 10%（实测 551KB → 57.8KB）。SSE 是流式 gzip，每次写后 `flush()`，延迟不变。
+改这块时别把 `sseWrite()` 换回 `res.write()`——那样浏览器收到的是 gzip 字节流，EventSource 直接断。
+
 **自动跟随的优先级**（`fold.cjs` 的 `pickSession`）：
 
 ```

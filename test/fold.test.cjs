@@ -53,3 +53,46 @@ test('坏事件只记告警，不让整份状态崩掉', () => {
   assert.ok(S.warn && S.warn.count >= 1, '要记录告警次数')
   assert.strictEqual(S.warn.lastType, '?')
 })
+
+test('model/selection 解析出模型、供应商与推理强度，并记入 modelHist', () => {
+  const f = core.makeFolder()
+  f.push({ type: 'session', time: 1, data: { id: 's1' } })
+  f.push({ type: 'turn/start', time: 2, data: { turn: 1 } })
+  f.push({ type: 'model/selection', time: 3, data: { provider: 'deepseek-account', model: 'deepseek-flash', reasoningEffort: 'max' } })
+  let S = f.result()
+  assert.strictEqual(S.provider, 'deepseek-account')
+  assert.strictEqual(S.model, 'deepseek-flash')
+  assert.strictEqual(S.effort, 'max')
+  assert.strictEqual(S.modelHist.length, 1, '第一次选择要记一条')
+  assert.strictEqual(S.modelHist[0].turn, 1)
+
+  /* 第二轮换供应商 + 模型：必须再记一条，且字段更新 */
+  f.push({ type: 'turn/start', time: 4, data: { turn: 2 } })
+  f.push({ type: 'model/selection', time: 5, data: { provider: 'opencode-go', model: 'deepseek-v4.1-flash', reasoningEffort: 'high' } })
+  S = f.result()
+  assert.strictEqual(S.provider, 'opencode-go')
+  assert.strictEqual(S.model, 'deepseek-v4.1-flash')
+  assert.strictEqual(S.effort, 'high')
+  assert.strictEqual(S.modelHist.length, 2)
+  assert.strictEqual(S.modelHist[1].turn, 2)
+  assert.strictEqual(S.modelHist[1].provider, 'opencode-go')
+})
+
+test('只改推理强度也算一次模型变更', () => {
+  const f = core.makeFolder()
+  f.push({ type: 'turn/start', time: 1, data: { turn: 1 } })
+  f.push({ type: 'model/selection', time: 2, data: { provider: 'p', model: 'm', reasoningEffort: 'low' } })
+  f.push({ type: 'model/selection', time: 3, data: { provider: 'p', model: 'm', reasoningEffort: 'max' } })
+  const S = f.result()
+  assert.strictEqual(S.effort, 'max')
+  assert.strictEqual(S.modelHist.length, 2, '强度变化也要留痕')
+})
+
+test('request/context 仍然补模型与上下文窗口', () => {
+  const f = core.makeFolder()
+  f.push({ type: 'request/context', time: 1, data: { contextWindow: 1000000, model: 'deepseek-v4.1-flash', provider: 'opencode-go' } })
+  const S = f.result()
+  assert.strictEqual(S.ctxWin, 1000000)
+  assert.strictEqual(S.model, 'deepseek-v4.1-flash')
+  assert.strictEqual(S.provider, 'opencode-go')
+})
