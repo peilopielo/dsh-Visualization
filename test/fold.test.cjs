@@ -96,3 +96,52 @@ test('request/context 仍然补模型与上下文窗口', () => {
   assert.strictEqual(S.model, 'deepseek-v4.1-flash')
   assert.strictEqual(S.provider, 'opencode-go')
 })
+
+test('上下文压缩：轮次、裁掉的 token、摘要都能读出来', () => {
+  const f = core.makeFolder()
+  f.push({ type: 'turn/start', time: 1, data: { turn: 77 } })
+  f.push({ type: 'compaction/start', time: 2, data: { compactionId: 'c1', turn: 77 } })
+  f.push({ type: 'compaction/prune', time: 3, data: { shadowedTokenCount: 2917 } })
+  f.push({ type: 'compaction/prune', time: 4, data: { shadowedTokenCount: 1000 } })
+  f.push({ type: 'compaction/summary', time: 5, data: { compactionId: 'c1', summary: [{ type: 'text', text: '## 摘要：主线是运维' }] } })
+  f.push({ type: 'compaction/end', time: 6, data: { compactionId: 'c1', turn: 77 } })
+  const S = f.result()
+  assert.strictEqual(S.compactions.length, 1)
+  assert.strictEqual(S.compactions[0].turn, 77, '压缩发生在第 77 轮')
+  assert.strictEqual(S.compactions[0].pruned, 3917, '两次 prune 要累加')
+  assert.strictEqual(S.prunedTokens, 3917)
+  assert.match(S.compactions[0].summary, /运维/, '摘要要留下')
+  assert.strictEqual(S.compactions[0].done, true)
+})
+
+test('模型失败尝试：从 assistant/attempt 的 stream 里识别错误', () => {
+  const f = core.makeFolder()
+  f.push({
+    type: 'assistant/attempt', time: 1,
+    data: { turn: 9, step: 1, stream: [{ type: 'chunk', chunk: { type: 'finish', reason: { kind: 'error', failure: { message: '400 region blocked', code: 'INVALID_REQUEST' } } } }] },
+  })
+  let S = f.result()
+  assert.strictEqual(S.llmErrors, 1)
+  assert.match(S.lastError, /region blocked/)
+
+  /* 正常结束的 attempt 不算失败 */
+  f.push({
+    type: 'assistant/attempt', time: 2,
+    data: { turn: 9, step: 2, stream: [{ type: 'chunk', chunk: { type: 'finish', reason: { kind: 'stop' } } }] },
+  })
+  S = f.result()
+  assert.strictEqual(S.llmErrors, 1, '正常结束不应增加失败数')
+})
+
+test('运行时模式：沙箱、权限档、计划模式', () => {
+  const f = core.makeFolder()
+  f.push({ type: 'sandbox/mode', time: 1, data: { mode: 'danger-full-access' } })
+  f.push({ type: 'permission/preset', time: 2, data: { preset: 'workspace-write' } })
+  f.push({ type: 'plan/mode', time: 3, data: { enabled: true } })
+  f.push({ type: 'llm/retry', time: 4, data: {} })
+  const S = f.result()
+  assert.strictEqual(S.sandbox, 'danger-full-access')
+  assert.strictEqual(S.permission, 'workspace-write')
+  assert.strictEqual(S.planMode, true)
+  assert.strictEqual(S.retries, 1)
+})

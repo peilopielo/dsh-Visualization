@@ -111,6 +111,10 @@ git add -A; git commit -m "..."; git push
     另外 `model/selection` 才是模型选择的权威事件（带 `reasoningEffort`），`request/context` 会晚一步；
     子会话的 `subagent/descriptor` 里可能有 `agentModel` / `agentProvider` 覆盖。
 
+11. **压缩 / 失败 / 模式各有自己的事件族**：`compaction/start|prune|summary|end`（`shadowedTokenCount` 才是裁掉的 token 数）、
+    `assistant/attempt`（失败看 `stream[].chunk.reason.kind === 'error'`，`failure.message` 是原文）、
+    `sandbox/mode` / `permission/preset` / `plan/mode`。这些事件在 fold.cjs 里各自有 case，别按类型前缀糊一起处理。
+
 ## 9. 壁纸
 
 只有 Lively 一条路：`wallpaper/lively/` + `lively-package.zip`（WebView2 满帧、鼠标可交互）。

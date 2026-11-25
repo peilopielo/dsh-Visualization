@@ -150,6 +150,11 @@ git add -A; git commit -m "..."; git push
     shows only the `lead` row. Also `model/selection` is the authoritative model event (it carries `reasoningEffort`);
     `request/context` lags one step, and a child's `subagent/descriptor` may override `agentModel` / `agentProvider`.
 
+11. **Compaction, failures and modes each have their own event family**: `compaction/start|prune|summary|end`
+    (`shadowedTokenCount` is the number of pruned tokens), `assistant/attempt` (a failure is
+    `stream[].chunk.reason.kind === 'error'`, with the provider text in `failure.message`), and
+    `sandbox/mode` / `permission/preset` / `plan/mode`. fold.cjs has a case per family — do not lump them together.
+
 ## 9. Wallpaper
 
 Lively is the only route: `wallpaper/lively/` + `lively-package.zip` (WebView2, full frame rate,

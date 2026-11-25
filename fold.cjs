@@ -346,6 +346,14 @@ const clip = (s, n) => {
   s = String(s == null ? '' : s).replace(/\s+/g, ' ').trim()
   return s.length > n ? s.slice(0, n - 1) + '…' : s
 }
+
+/* token 数缩写：2917 → 2.9k */
+function tokStr(v) {
+  const x = Number(v) || 0
+  if (x >= 1e6) return (x / 1e6).toFixed(1) + 'M'
+  if (x >= 1e3) return (x / 1e3).toFixed(1) + 'k'
+  return String(x)
+}
 function textOf(content) {
   if (!Array.isArray(content)) return ''
   return content.filter((c) => c && c.type === 'text').map((c) => c.text).join(' ')
@@ -397,6 +405,10 @@ function makeFolder() {
     jobs: [], steps: [], turns: [], pendingPrompt: '', skills: [], ticks: [], toolAgg: {},
     approvalsList: [], changes: [], delivs: [],
     subagents: 0, approvals: 0, todos: 0, files: 0,
+    /* 上下文压缩、模型失败、运行时模式 */
+    compactions: [], prunedTokens: 0,
+    llmErrors: 0, lastError: '', retries: 0,
+    sandbox: '', permission: '', planMode: false,
     /* 智能体团队：team/mode、team/member、team/task 事件累积 */
     team: { enabled: false, teamId: null, members: [], tasks: [], msgs: 0 },
     log: [], lastEvent: 0, lastAssistant: 0, prevAssistant: 0, lastOut: 0,
@@ -460,6 +472,73 @@ function makeFolder() {
             provider: S.provider, model: S.model, effort: S.effort,
           })
           if (S.modelHist.length > 60) S.modelHist.shift()
+        }
+        break
+      }
+      /* 上下文压缩：start → prune(裁掉多少) → summary(摘要) → end */
+      case 'compaction/start': {
+        const cid = d.compactionId || ''
+        S.compactions.push({ id: cid, turn: d.turn || NOWTURN, t: e.time, pruned: 0, summary: '', done: false })
+        if (S.compactions.length > 20) S.compactions.shift()
+        addLog('state', 'compact', '上下文压缩开始 · T' + (d.turn || NOWTURN))
+        break
+      }
+      case 'compaction/prune': {
+        const cut = Number(d.shadowedTokenCount) || 0
+        S.prunedTokens += cut
+        const lastP = S.compactions[S.compactions.length - 1]
+        if (lastP) lastP.pruned += cut
+        addLog('state', 'prune', '裁掉 ' + tokStr(cut) + ' tokens')
+        break
+      }
+      case 'compaction/summary': {
+        let sTxt = ''
+        if (Array.isArray(d.summary)) {
+          sTxt = d.summary.map(function (x) { return (x && x.text) || '' }).join(' ').trim()
+        }
+        const lastS = S.compactions[S.compactions.length - 1]
+        if (lastS) lastS.summary = clip(sTxt, 200)
+        addLog('state', 'compact', '压缩摘要 · ' + clip(sTxt, 80))
+        break
+      }
+      case 'compaction/end': {
+        const lastE = S.compactions[S.compactions.length - 1]
+        if (lastE) { lastE.done = true; lastE.endT = e.time }
+        break
+      }
+      /* 运行时模式 */
+      case 'sandbox/mode':
+        S.sandbox = d.mode || S.sandbox
+        addLog('state', 'sandbox', String(S.sandbox))
+        break
+      case 'permission/preset':
+        S.permission = d.preset || S.permission
+        addLog('state', 'permission', String(S.permission))
+        break
+      case 'plan/mode':
+        S.planMode = !!d.enabled
+        addLog('state', 'plan', S.planMode ? '开启' : '关闭')
+        break
+      /* 模型重试与失败尝试 */
+      case 'llm/retry':
+      case 'llm/retry-started':
+        S.retries++
+        addLog('state', 'retry', '模型重试 ' + S.retries)
+        break
+      case 'assistant/attempt': {
+        /* stream 里如果有 finish.reason.kind==='error'，说明这次调用失败了 */
+        let fail = null
+        const stream = Array.isArray(d.stream) ? d.stream : []
+        for (let ai = 0; ai < stream.length; ai++) {
+          const ch = stream[ai] && stream[ai].chunk
+          if (ch && ch.type === 'finish' && ch.reason && ch.reason.kind === 'error') {
+            fail = ch.reason.failure || {}
+          }
+        }
+        if (fail) {
+          S.llmErrors++
+          S.lastError = clip(String(fail.message || fail.code || 'unknown'), 240)
+          addLog('state', 'llm-err', clip(S.lastError, 100), null, false)
         }
         break
       }

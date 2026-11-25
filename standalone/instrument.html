@@ -278,6 +278,7 @@ body.compact .dash{grid-template-columns:1fr}
       <h4><span class="lb">上下文占用 / CONTEXT</span><b id="sTps">3 tok/s</b></h4>
       <div class="ctxbar"><i id="ctxBar" style="width: 21%;"></i></div>
       <div class="ctxrow"><b id="ctxPct">21%</b><span id="ctxTok">219.6k / 1.05M</span></div>
+      <div class="ctxrow" id="ctxCmp" style="display:none;font-size:10px;color:var(--task);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block"></div>
       <div class="kv">
         <div><i>输入</i><b id="tokIn">1.24M</b></div>
         <div><i>输出</i><b id="tokOut">537.7k</b></div>
@@ -285,6 +286,16 @@ body.compact .dash{grid-template-columns:1fr}
         <div><i>模型</i><b id="tokModel" class="ellip">—</b></div>
         <div><i>供应商</i><b id="tokProv" class="ellip">—</b></div>
         <div><i>推理强度</i><b id="tokEffort">—</b></div>
+      </div>
+    </section>
+
+    <section class="blk" id="rtBlock" style="display:none">
+      <h4><span class="lb">运行时 / 沙箱与权限</span><b id="sRt"></b></h4>
+      <div class="kv">
+        <div><i>沙箱</i><b id="rtSandbox" class="ellip">—</b></div>
+        <div><i>权限档</i><b id="rtPerm" class="ellip">—</b></div>
+        <div><i>计划模式</i><b id="rtPlan">—</b></div>
+        <div><i>模型失败</i><b id="rtErr">0</b></div>
       </div>
     </section>
 
@@ -321,7 +332,7 @@ body.compact .dash{grid-template-columns:1fr}
       <span class="lb">Event log / 真实事件</span>
       <span class="lb" id="logHint">共 149 条 · 按轮分组 · 新在最上</span>
     </div>
-    <div class="flt" id="fLog"><b data-f="log:all" class="on">全部</b><b data-f="log:tool" class="">工具</b><b data-f="log:task" class="">任务</b><b data-f="log:session" class="">会话</b><b data-f="log:skill" class="">技能</b><b data-f="log:user" class="">用户</b></div>
+    <div class="flt" id="fLog"><b data-f="log:all" class="on">全部</b><b data-f="log:tool" class="">工具</b><b data-f="log:task" class="">任务</b><b data-f="log:session" class="">会话</b><b data-f="log:skill" class="">技能</b><b data-f="log:user" class="">用户</b><b data-f="log:state" class="">状态</b></div>
     <div class="tb" id="rows"></div>
   </section>
   <div class="credit">DSH Visualization by Ryder191 · PolyForm NC · visual language: HALOFLUX</div>
@@ -346,6 +357,8 @@ body.compact .dash{grid-template-columns:1fr}
     tools: [], toolCount: 0, jobs: [], skills: [], log: [],
     subagents: 0, approvals: 0, todos: 0, errs: 0,
     session: {}, bridge: {}, model: '—', provider: '', effort: '', modelHist: [],
+    compactions: [], prunedTokens: 0, llmErrors: 0, lastError: '', retries: 0,
+    sandbox: '', permission: '', planMode: false,
     lastUpdate: 0, stale: false,
     /* 按"显示轮数"收窄后的数组，render 里赋值；先给空数组，免得 draw 在首帧读到 undefined */
     sSteps: [], sJobs: [], sTools: [], sLog: [], sStats: [],
@@ -700,6 +713,14 @@ body.compact .dash{grid-template-columns:1fr}
     M.provider = j.provider || '';
     M.effort = j.effort || '';
     M.modelHist = j.modelHist || [];
+    M.compactions = j.compactions || [];
+    M.prunedTokens = j.prunedTokens || 0;
+    M.llmErrors = j.llmErrors || 0;
+    M.lastError = j.lastError || '';
+    M.retries = j.retries || 0;
+    M.sandbox = j.sandbox || '';
+    M.permission = j.permission || '';
+    M.planMode = !!j.planMode;
       if (j.replay && j.replay.on) {
         RP.on = true; RP.mode = j.replay.mode || 'seq'; RP.playing = j.replay.playing; RP.speed = j.replay.speed;
         RP.vtime = j.replay.vtime; RP.t0 = j.replay.t0; RP.t1 = j.replay.t1;
@@ -750,6 +771,14 @@ body.compact .dash{grid-template-columns:1fr}
   /* ---------------- 表格 ---------------- */
   function cell(v) { return '<span>' + (v == null ? '' : v) + '</span>' }
   /* 用户输入的文本要转义，否则里面的 < > & 会把表格结构打坏 */
+  /* token 数缩写：2917 → 2.9k */
+  function fmtTok(v) {
+    var x = Number(v) || 0;
+    if (x >= 1e9) return (x / 1e9).toFixed(2) + 'G';
+    if (x >= 1e6) return (x / 1e6).toFixed(2) + 'M';
+    if (x >= 1e3) return (x / 1e3).toFixed(1) + 'k';
+    return String(x);
+  }
   /* 模型名太长会撑破表格：只留后半段，完整值放 title */
   function shortModel(n) {
     n = String(n || '');
@@ -995,6 +1024,42 @@ body.compact .dash{grid-template-columns:1fr}
             ? ' · ' + subs.filter(function (s) { return s.running; }).length + ' 在跑' : '');
       }
     }
+    /* 上下文压缩：有才显示，写清「几次、裁掉多少、最近一次在第几轮」 */
+    var cmp = $('ctxCmp');
+    if (cmp) {
+      if (M.compactions.length) {
+        var lastC = M.compactions[M.compactions.length - 1];
+        cmp.style.display = '';
+        cmp.textContent = '⇩ ' + M.compactions.length + ' 次压缩 · 已裁 ' + fmtTok(M.prunedTokens) +
+          ' · 最近 T' + lastC.turn + (lastC.summary ? ' · ' + lastC.summary.slice(0, 24) + (lastC.summary.length > 24 ? '…' : '') : '');
+        cmp.title = lastC.summary || '';
+      } else {
+        cmp.style.display = 'none';
+      }
+    }
+
+    /* 运行时：沙箱 / 权限档 / 计划模式 / 模型失败次数 */
+    var rt = $('rtBlock');
+    if (rt) {
+      var hasRt = !!(M.sandbox || M.permission || M.planMode || M.llmErrors);
+      rt.style.display = hasRt ? '' : 'none';
+      if (hasRt) {
+        var sb2 = $('rtSandbox');
+        if (sb2) { sb2.textContent = M.sandbox || '—'; sb2.title = M.sandbox || ''; }
+        var pm2 = $('rtPerm');
+        if (pm2) { pm2.textContent = M.permission || '—'; pm2.title = M.permission || ''; }
+        var pl2 = $('rtPlan');
+        if (pl2) { pl2.textContent = M.planMode ? tr('开启') : '—'; }
+        var er2 = $('rtErr');
+        if (er2) {
+          er2.textContent = String(M.llmErrors) + (M.retries ? ' · 重试 ' + M.retries : '');
+          er2.title = M.lastError || '';
+          er2.style.color = M.llmErrors ? 'var(--bad)' : '';
+        }
+        $('sRt').textContent = M.llmErrors ? '⚠ ' + M.llmErrors + ' 次失败' : '';
+      }
+    }
+
     $('sJobs').textContent = M.sJobs.filter(function (j) { return j.state === 'RUN'; }).length + ' 运行中 / 共 ' + M.sJobs.length +
       (FILTER.jobs === 'all' ? '' : ' · 显示 ' + jobs.length);
 
@@ -1013,6 +1078,13 @@ body.compact .dash{grid-template-columns:1fr}
       if (mc) {
         mcTitle = (mc.provider ? mc.provider + '/' : '') + (mc.model || '') + (mc.effort ? ' · ' + mc.effort : '');
         m2 += ' · ⇄ ' + shortModel(mc.model);
+      }
+      /* 这一轮被压缩过就标 ⇩ */
+      var cmpTurn = null;
+      (M.compactions || []).forEach(function (c2) { if (c2.turn === t3.no) cmpTurn = c2 });
+      if (cmpTurn) {
+        m2 += ' · ⇩ 压缩';
+        mcTitle = (mcTitle ? mcTitle + ' · ' : '') + '第 ' + t3.no + ' 轮压缩，裁掉 ' + fmtTok(cmpTurn.pruned) + ' tokens';
       }
       h += '<div class="row2' + (cur3 ? ' cur' : '') + '"' + (mcTitle ? ' title="' + esc(mcTitle) + '"' : '') + '>' +
         '<div class="l1"><span class="no">T' + t3.no + (cur3 ? ' ●' : '') + '</span><span class="meta">' + m2 + '</span></div>' +
@@ -1082,7 +1154,8 @@ body.compact .dash{grid-template-columns:1fr}
       ? '数据源：' + (M.session.id || '?').replace('session-', 'session-').slice(0, 20) + '… · ' + fmt(M.bridge.bytes) + 'B' +
         
         (M.warn && M.warn.count ? '  · ⚠ 解析告警 ' + M.warn.count : '') +
-        (ERR.count ? '  · ⚠ 运行时错误 ' + ERR.count : '')
+        (ERR.count ? '  · ⚠ 运行时错误 ' + ERR.count : '') +
+        (M.llmErrors ? '  · ⚠ 模型失败 ' + M.llmErrors : '')
       : '数据源：未连接';
     if (LANG !== 'zh') setTimeout(translateDom, 0);   /* 英文模式：等这一帧所有赋值完成再换标签 */
     $('lkMeta').innerHTML = M.ok

@@ -124,6 +124,22 @@ desktop icons, turn icon display off in Lively's settings.
 
 Port fallback (8799 → 8795) is documented in [`wallpaper/README.en.md`](wallpaper/README.en.md).
 
+## 8.5 Compaction, model failures and runtime
+
+Long sessions trigger **context compaction**: the model folds the earlier conversation into a summary and drops old
+messages. The panel makes that visible:
+
+- A line under the context block: `⇩ 2 compactions · 129.5k pruned · last T283 · ## summary…` (hover for the full summary)
+- The compacted turn carries a `⇩ compact` marker in the timeline
+- `compact` / `prune` entries show up in the event log (layer = state)
+
+**Model failures**: `⚠ N failures` sits at the top right of the runtime block, and the event log carries `llm-err`
+entries (red ×) whose detail is the provider's error text — with third-party APIs (opencode-go and friends) region
+restrictions, quota and image-budget errors all land here.
+
+The runtime block also shows the current sandbox mode (`danger-full-access` / `workspace-write` / `read-only`),
+permission level and plan mode. Switching any of them leaves a `sandbox` / `permission` / `plan` entry in the log.
+
 ## 9. Troubleshooting
 
 | Symptom | Cause |
